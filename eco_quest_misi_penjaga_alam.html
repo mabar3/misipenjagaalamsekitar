@@ -1,0 +1,2495 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ECO QUEST: MISI PENJAGA ALAM 🌍</title>
+    <!-- Tailwind CSS untuk UI responsif & moden -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js r128 untuk persekitaran 3D -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Google Fonts: Fredoka & Inter untuk gaya mesra kanak-kanak dan mudah dibaca -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-green: #10b981;
+            --dark-green: #047857;
+            --accent-amber: #f59e0b;
+            --accent-blue: #3b82f6;
+            --glass-bg: rgba(15, 23, 42, 0.78);
+            --glass-border: rgba(255, 255, 255, 0.22);
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            touch-action: none;
+        }
+
+        h1, h2, h3, .font-game {
+            font-family: 'Fredoka', sans-serif;
+        }
+
+        #game-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            z-index: 1;
+        }
+
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 2px solid var(--glass-border);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+        }
+
+        .glass-card-light {
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(10px);
+            border: 3px solid #e2e8f0;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
+        }
+
+        /* Game Buttons */
+        .btn-game {
+            font-family: 'Fredoka', sans-serif;
+            transition: all 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: 0 5px 0 rgba(0, 0, 0, 0.3);
+            position: relative;
+            top: 0;
+        }
+        .btn-game:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.06);
+        }
+        .btn-game:active {
+            top: 4px;
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        /* Animations */
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+        .animate-float {
+            animation: floatSlow 3s ease-in-out infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.5), inset 0 0 15px rgba(16, 185, 129, 0.2); }
+            50% { box-shadow: 0 0 30px rgba(16, 185, 129, 0.9), inset 0 0 25px rgba(16, 185, 129, 0.4); }
+        }
+        .dropzone-pulse {
+            animation: pulseGlow 2s infinite;
+        }
+
+        @keyframes hintHighlight {
+            0%, 100% { box-shadow: 0 0 0 4px #f59e0b, 0 0 30px #f59e0b; transform: scale(1.02); }
+            50% { box-shadow: 0 0 0 8px #fbbf24, 0 0 50px #fbbf24; transform: scale(1.04); }
+        }
+        .hint-glow {
+            animation: hintHighlight 1.2s ease-in-out infinite;
+        }
+
+        @keyframes shakeCard {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-10px) rotate(-2deg); }
+            40% { transform: translateX(10px) rotate(2deg); }
+            60% { transform: translateX(-8px) rotate(-1deg); }
+            80% { transform: translateX(8px) rotate(1deg); }
+        }
+        .shake-error {
+            animation: shakeCard 0.45s ease-in-out;
+            border-color: #ef4444 !important;
+            background-color: #fef2f2 !important;
+        }
+
+        @keyframes popSuccess {
+            0% { transform: scale(0.85); }
+            60% { transform: scale(1.06); }
+            100% { transform: scale(1); }
+        }
+        .pop-success {
+            animation: popSuccess 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Virtual Joysticks */
+        .joystick-zone {
+            position: fixed;
+            bottom: 24px;
+            width: 130px;
+            height: 130px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.16);
+            border: 2px solid rgba(255, 255, 255, 0.38);
+            backdrop-filter: blur(4px);
+            z-index: 25;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: none;
+        }
+        .joystick-knob {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(203,213,225,0.75));
+            box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+            pointer-events: none;
+            transition: transform 0.05s linear;
+        }
+
+        /* Dragging Card Style */
+        .draggable-card {
+            touch-action: none;
+            cursor: grab;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.2s ease;
+        }
+        .draggable-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.22);
+        }
+        .draggable-card.is-dragging {
+            cursor: grabbing;
+            z-index: 9999 !important;
+            transform: scale(1.08) rotate(2deg);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+            transition: none;
+        }
+
+        /* Custom Scrollbar for small screens */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.4);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(16, 185, 129, 0.6);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 3D WebGL Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- 1. LOADING SCREEN -->
+    <div id="loading-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-emerald-900 via-teal-900 to-slate-900 text-white p-6">
+        <div class="text-6xl mb-4 animate-bounce">🌍</div>
+        <h1 class="text-3xl md:text-5xl font-bold text-center text-emerald-300 tracking-wide mb-2">ECO QUEST</h1>
+        <p class="text-lg md:text-xl text-teal-100 font-game mb-6 text-center">MISI PENJAGA ALAM • Pendidikan Islam Tahun 5</p>
+        <div class="w-64 md:w-80 h-4 bg-slate-800 rounded-full overflow-hidden border border-emerald-500/40 p-0.5">
+            <div id="loading-bar" class="h-full bg-gradient-to-r from-emerald-400 to-lime-300 rounded-full transition-all duration-300" style="width: 15%"></div>
+        </div>
+        <p id="loading-text" class="mt-3 text-sm text-emerald-200">Membina dunia alam semula jadi 3D...</p>
+    </div>
+
+    <!-- 2. MAIN MENU -->
+    <div id="main-menu" class="hidden fixed inset-0 z-40 flex items-center justify-center p-4 bg-slate-950/45 backdrop-blur-sm">
+        <div class="glass-panel max-w-xl w-full rounded-3xl p-6 md:p-8 text-center text-white relative overflow-hidden">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/25 border border-emerald-400/40 text-emerald-200 text-xs md:text-sm font-semibold mb-4">
+                <span>🕌 Pendidikan Islam Tahun 5</span>
+                <span>•</span>
+                <span>Alam Ceria Hidup Sejahtera</span>
+            </div>
+            
+            <div class="text-5xl md:text-6xl mb-2 animate-float">🌍🌱</div>
+            <h1 class="text-3xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-lime-200 to-amber-200 leading-tight mb-2">
+                ECO QUEST
+            </h1>
+            <h2 class="text-xl md:text-2xl font-bold text-amber-300 mb-4 tracking-wide">
+                MISI PENJAGA ALAM
+            </h2>
+            
+            <p class="text-slate-200 text-sm md:text-base leading-relaxed mb-6 bg-slate-900/50 p-4 rounded-2xl border border-white/10">
+                Terokai dunia 3D yang indah, cari <strong>5 Checkpoint Alam</strong>, dan padankan amalan <strong>Memelihara Alam</strong> dengan perbuatan <strong>Mencemarkan Alam</strong> dalam konteks yang sama!
+            </p>
+
+            <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                <button id="btn-start-game" class="btn-game flex-1 py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-lg md:text-xl flex items-center justify-center gap-2 cursor-pointer">
+                    <span>▶</span> MULA MISI
+                </button>
+                <button id="btn-open-settings-menu" class="btn-game py-4 px-6 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-lg flex items-center justify-center gap-2 cursor-pointer">
+                    <span>⚙️</span> TETAPAN
+                </button>
+            </div>
+
+            <div class="mt-5 pt-4 border-t border-white/10 flex flex-wrap justify-center gap-4 text-xs text-slate-300">
+                <span>⌨️ Desktop: WASD + Tetikus + E</span>
+                <span>📱 Telefon/Tablet: Joystick Sentuh</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. IN-GAME HUD (Minimal & Tidak Mengganggu) -->
+    <div id="game-hud" class="hidden fixed inset-0 z-20 pointer-events-none">
+        <!-- Top Bar -->
+        <div class="flex flex-wrap items-start justify-between p-3 md:p-5 gap-2">
+            <!-- Left: Title & Progress -->
+            <div class="glass-panel rounded-2xl px-4 py-2.5 text-white pointer-events-auto flex items-center gap-3 md:gap-4">
+                <div class="text-2xl md:text-3xl">🌍</div>
+                <div>
+                    <div class="font-game font-bold text-sm md:text-base text-emerald-300 leading-none">ECO QUEST</div>
+                    <div class="flex items-center gap-2 mt-1.5">
+                        <div class="w-24 md:w-32 h-2.5 bg-slate-800 rounded-full overflow-hidden border border-white/15">
+                            <div id="hud-progress-bar" class="h-full bg-gradient-to-r from-emerald-400 to-lime-300 transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                        <span id="hud-progress-text" class="text-xs font-bold text-amber-300">0/5</span>
+                    </div>
+                </div>
+                <!-- 5 Mini Badges -->
+                <div id="hud-badges" class="hidden sm:flex items-center gap-1.5 pl-2 border-l border-white/15">
+                    <span data-badge="0" class="w-7 h-7 rounded-full bg-slate-800/90 border border-white/20 flex items-center justify-center text-xs opacity-40 transition-all" title="Hutan">🌳</span>
+                    <span data-badge="1" class="w-7 h-7 rounded-full bg-slate-800/90 border border-white/20 flex items-center justify-center text-xs opacity-40 transition-all" title="Sungai">🌊</span>
+                    <span data-badge="2" class="w-7 h-7 rounded-full bg-slate-800/90 border border-white/20 flex items-center justify-center text-xs opacity-40 transition-all" title="Udara & Jalan">🚲</span>
+                    <span data-badge="3" class="w-7 h-7 rounded-full bg-slate-800/90 border border-white/20 flex items-center justify-center text-xs opacity-40 transition-all" title="Kediaman">🏡</span>
+                    <span data-badge="4" class="w-7 h-7 rounded-full bg-slate-800/90 border border-white/20 flex items-center justify-center text-xs opacity-40 transition-all" title="Pertanian">🌱</span>
+                </div>
+            </div>
+
+            <!-- Center: Compass / Nearest Checkpoint Indicator -->
+            <div id="hud-compass" class="glass-panel rounded-2xl px-3.5 py-2 text-white flex items-center gap-2.5 text-xs md:text-sm">
+                <div id="compass-arrow" class="w-7 h-7 rounded-full bg-amber-500/30 border border-amber-400 flex items-center justify-center text-amber-300 font-bold transition-transform duration-100">
+                    ▲
+                </div>
+                <div>
+                    <div class="text-[10px] uppercase tracking-wider text-slate-300">Checkpoint Terdekat</div>
+                    <div id="compass-target" class="font-bold text-amber-200">Hutan (45m)</div>
+                </div>
+            </div>
+
+            <!-- Right: Score & Quick Controls -->
+            <div class="flex items-center gap-2 pointer-events-auto">
+                <div class="glass-panel rounded-2xl px-3.5 py-2 text-white text-right">
+                    <div class="text-[10px] uppercase tracking-wider text-emerald-300 font-semibold">Markah</div>
+                    <div id="hud-score" class="font-game font-bold text-lg md:text-xl text-white leading-none">0</div>
+                </div>
+                <button id="btn-toggle-controller" class="glass-panel hover:bg-slate-800/90 w-11 h-11 md:w-12 md:h-12 rounded-2xl flex items-center justify-center text-white text-lg cursor-pointer transition" title="Tukar Mod Kawalan (Keyboard / Sentuh)">
+                    🎮
+                </button>
+                <button id="btn-open-settings-hud" class="glass-panel hover:bg-slate-800/90 w-11 h-11 md:w-12 md:h-12 rounded-2xl flex items-center justify-center text-white text-lg cursor-pointer transition" title="Tetapan / Pause (ESC)">
+                    ⚙️
+                </button>
+            </div>
+        </div>
+
+        <!-- Center Crosshair (Desktop FPS) -->
+        <div id="fps-crosshair" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white/75 border border-slate-900/60 shadow"></div>
+
+        <!-- Pointer Lock Helper Hint (Desktop) -->
+        <div id="pointer-lock-banner" class="hidden fixed top-20 left-1/2 -translate-x-1/2 bg-slate-900/80 text-amber-200 border border-amber-400/40 px-4 py-1.5 rounded-full text-xs pointer-events-none">
+            Klik skrin untuk kawal pandangan tetikus • Tekan ESC untuk menu
+        </div>
+
+        <!-- Checkpoint Proximity Prompt -->
+        <div id="checkpoint-prompt" class="hidden fixed bottom-28 md:bottom-24 left-1/2 -translate-x-1/2 z-30 pointer-events-auto w-[92%] max-w-md">
+            <div class="glass-panel border-2 border-amber-400 rounded-3xl p-4 text-center text-white shadow-2xl animate-float">
+                <div class="inline-block px-3 py-0.5 rounded-full bg-amber-500 text-slate-950 font-bold text-xs mb-1">
+                    ✨ CHECKPOINT DITEMUI!
+                </div>
+                <h3 id="prompt-cp-name" class="font-game text-xl md:text-2xl font-bold text-amber-200 mb-1">CHECKPOINT 1 – HUTAN 🌳</h3>
+                <p id="prompt-cp-sub" class="text-xs md:text-sm text-slate-200 mb-3">Tekan <strong>E</strong> atau sentuh butang di bawah untuk memulakan cabaran</p>
+                <button id="btn-interact-prompt" class="btn-game w-full py-3 px-5 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-bold text-base md:text-lg cursor-pointer">
+                    ⚡ MULA CABARAN (E / TAP)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. TOUCHSCREEN VIRTUAL CONTROLLERS -->
+    <div id="touch-controls" class="hidden">
+        <!-- Left Joystick: Movement -->
+        <div id="joystick-left" class="joystick-zone left-5">
+            <div id="knob-left" class="joystick-knob"></div>
+            <span class="absolute -top-6 text-[11px] font-bold text-white/80 bg-slate-900/50 px-2 py-0.5 rounded-full">GERAK</span>
+        </div>
+
+        <!-- Right Joystick: Camera Look -->
+        <div id="joystick-right" class="joystick-zone right-5">
+            <div id="knob-right" class="joystick-knob"></div>
+            <span class="absolute -top-6 text-[11px] font-bold text-white/80 bg-slate-900/50 px-2 py-0.5 rounded-full">PANDANG</span>
+        </div>
+
+        <!-- Big Touch Interact Button (Bottom Center when near checkpoint) -->
+        <button id="btn-touch-interact" class="hidden fixed bottom-7 left-1/2 -translate-x-1/2 z-30 btn-game px-6 py-4 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-bold text-base border-2 border-white shadow-xl cursor-pointer">
+            ⚡ INTERACT
+        </button>
+    </div>
+
+    <!-- 5. PUZZLE MODAL (DRAG & DROP GAMBAR BERKONTEKS) -->
+    <div id="puzzle-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center p-2 sm:p-4 bg-slate-950/65 backdrop-blur-md overflow-y-auto">
+        <div class="glass-panel w-full max-w-5xl rounded-3xl p-4 sm:p-6 text-white relative my-auto border-2 border-emerald-400/40">
+            
+            <!-- Header Puzzle -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-4 border-b border-white/15">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span id="puzzle-cp-badge" class="px-3 py-0.5 rounded-full bg-emerald-500/30 border border-emerald-400 text-emerald-200 text-xs font-bold">CHECKPOINT 1</span>
+                        <span id="puzzle-attempts-badge" class="px-2.5 py-0.5 rounded-full bg-slate-800 text-amber-300 text-xs font-semibold">Cubaan: 1 (100 Mata)</span>
+                    </div>
+                    <h2 class="font-game text-lg sm:text-2xl font-bold text-amber-300 mt-1">MISI PADANAN GAMBAR</h2>
+                    <p class="text-xs sm:text-sm text-slate-200">Seret gambar dari kanan yang mempunyai <strong>konteks sama</strong> tetapi menunjukkan tindakan berbeza.</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="btn-puzzle-hint" class="btn-game px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm flex items-center gap-1.5 cursor-pointer">
+                        <span>💡</span> PETUNJUK (-10)
+                    </button>
+                    <button id="btn-close-puzzle" class="btn-game px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs sm:text-sm cursor-pointer" title="Kembali ke dunia 3D">
+                        ✕ Tutup
+                    </button>
+                </div>
+            </div>
+
+            <!-- Hint Box (Hidden until requested or on wrong answer) -->
+            <div id="puzzle-feedback-banner" class="hidden mb-4 p-3 rounded-2xl text-xs sm:text-sm font-medium flex items-center gap-2.5 transition-all">
+                <span id="puzzle-feedback-icon" class="text-xl">💡</span>
+                <span id="puzzle-feedback-text">Petunjuk akan dipaparkan di sini.</span>
+            </div>
+
+            <!-- Main Puzzle Grid: Left (Main Card + Dropzone) vs Right (4 Draggable Options) -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-center">
+                
+                <!-- LEFT SECTION: Gambar Utama & Ruang Padanan (6 cols) -->
+                <div class="lg:col-span-6 bg-slate-900/65 rounded-2xl p-3 sm:p-4 border border-white/15">
+                    <div class="text-center mb-2">
+                        <span id="puzzle-location-title" class="font-game text-base sm:text-lg font-bold text-emerald-300">HUTAN 🌳</span>
+                        <p class="text-xs text-slate-300">Cari gambar yang mempunyai konteks sama</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 items-stretch">
+                        <!-- Main Card (Amalan Memelihara Alam) -->
+                        <div id="main-card-container" class="glass-card-light rounded-2xl p-2 flex flex-col justify-between text-slate-800 relative overflow-hidden transition-all">
+                            <div id="main-card-label" class="text-center py-1 px-2 rounded-lg bg-slate-200 text-slate-700 font-bold text-[10px] sm:text-xs mb-1.5">
+                                ❓ KATEGORI: MISTERI
+                            </div>
+                            <div id="main-card-art" class="w-full aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 border border-slate-300 flex items-center justify-center relative">
+                                <!-- Imej Cloudinary disuntik oleh JS -->
+                            </div>
+                            <p id="main-card-caption" class="mt-2 text-[11px] sm:text-xs font-semibold text-center text-slate-700 leading-tight">
+                                Menanam semula anak pokok di kawasan hutan
+                            </p>
+                        </div>
+
+                        <!-- Drop Zone (Ruang Padanan) -->
+                        <div id="puzzle-dropzone" class="rounded-2xl p-2 border-3 border-dashed border-emerald-400/80 bg-emerald-950/35 dropzone-pulse flex flex-col justify-between items-center text-center relative min-h-[180px] transition-all">
+                            <div id="dropzone-placeholder" class="my-auto flex flex-col items-center justify-center p-2">
+                                <div class="w-12 h-12 rounded-full bg-emerald-500/25 border border-emerald-400 flex items-center justify-center text-2xl mb-2">
+                                    📥
+                                </div>
+                                <p class="font-game font-bold text-xs sm:text-sm text-emerald-200">LETAK PASANGAN DI SINI</p>
+                                <p class="text-[10px] sm:text-xs text-slate-300 mt-1">Seret kad pilihan yang sepadan ke kotak ini</p>
+                            </div>
+                            <!-- Matched card will snap here -->
+                            <div id="dropzone-matched-content" class="hidden w-full h-full flex flex-col justify-between text-slate-800"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT SECTION: 4 Pilihan Gambar 2x2 (6 cols) -->
+                <div class="lg:col-span-6">
+                    <div class="text-xs font-semibold text-slate-300 mb-2 flex items-center justify-between">
+                        <span>PILIHAN TINDAKAN (Seret satu kad ke ruang padanan):</span>
+                        <span class="text-amber-300">✋ Drag & Drop</span>
+                    </div>
+                    <div id="puzzle-options-grid" class="grid grid-cols-2 gap-3">
+                        <!-- 4 Option Cards injected by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Success Explanation Panel (Shown after correct match) -->
+            <div id="puzzle-success-panel" class="hidden mt-4 p-4 rounded-2xl bg-gradient-to-r from-emerald-900/90 to-teal-900/90 border-2 border-emerald-400 pop-success">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="flex items-start gap-3">
+                        <div class="text-3xl sm:text-4xl">🎉</div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 class="font-game text-lg sm:text-xl font-bold text-lime-300">PADANAN BETUL!</h3>
+                                <span id="puzzle-earned-points" class="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 font-bold text-xs">+100 MATA</span>
+                            </div>
+                            <p id="puzzle-explanation-text" class="text-xs sm:text-sm text-white mt-1 leading-relaxed">
+                                Penerangan pendidikan akan dipaparkan di sini.
+                            </p>
+                        </div>
+                    </div>
+                    <button id="btn-puzzle-continue" class="btn-game shrink-0 w-full sm:w-auto py-3 px-6 rounded-2xl bg-gradient-to-r from-lime-400 to-emerald-500 text-slate-950 font-bold text-sm sm:text-base cursor-pointer">
+                        TERUSKAN PENEROKAAN ➔
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 6. SETTINGS & PAUSE MODAL -->
+    <div id="settings-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md overflow-y-auto">
+        <div class="glass-panel w-full max-w-xl rounded-3xl p-5 sm:p-6 text-white my-auto max-h-[92vh] overflow-y-auto">
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-white/15">
+                <h2 class="font-game text-2xl font-bold text-emerald-300 flex items-center gap-2">
+                    <span>⚙️</span> TETAPAN PERMAINAN
+                </h2>
+                <button id="btn-close-settings" class="btn-game px-3.5 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-sm cursor-pointer">
+                    ✕ Tutup
+                </button>
+            </div>
+
+            <div class="space-y-4 text-sm">
+                <!-- A. AUDIO -->
+                <div class="bg-slate-900/60 p-4 rounded-2xl border border-white/10">
+                    <h3 class="font-game font-bold text-amber-300 mb-3">🎵 A. AUDIO & MUZIK</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span>Muzik Latar</span>
+                                <button id="toggle-music" class="px-3 py-1 rounded-lg bg-emerald-600 font-bold text-xs cursor-pointer">ON</button>
+                            </div>
+                            <input id="slider-music" type="range" min="0" max="100" value="45" class="w-full accent-emerald-400 cursor-pointer">
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <span>Kesan Bunyi (SFX)</span>
+                                <button id="toggle-sfx" class="px-3 py-1 rounded-lg bg-emerald-600 font-bold text-xs cursor-pointer">ON</button>
+                            </div>
+                            <input id="slider-sfx" type="range" min="0" max="100" value="75" class="w-full accent-emerald-400 cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- B. GRAPHICS & RESOLUTION -->
+                <div class="bg-slate-900/60 p-4 rounded-2xl border border-white/10">
+                    <h3 class="font-game font-bold text-amber-300 mb-3">🖥️ B. GRAFIK & RESOLUSI</h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1.5">Kualiti Grafik 3D (Bayang & Partikel)</label>
+                            <div class="grid grid-cols-3 gap-2" id="quality-selector">
+                                <button data-quality="low" class="quality-btn py-2 rounded-xl bg-slate-800 border border-white/15 font-bold text-xs cursor-pointer">LOW</button>
+                                <button data-quality="medium" class="quality-btn py-2 rounded-xl bg-emerald-600 border border-emerald-300 font-bold text-xs cursor-pointer">MEDIUM</button>
+                                <button data-quality="high" class="quality-btn py-2 rounded-xl bg-slate-800 border border-white/15 font-bold text-xs cursor-pointer">HIGH</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-slate-300 mb-1.5">Skala Resolusi Rendering</label>
+                            <div class="grid grid-cols-3 gap-2" id="resolution-selector">
+                                <button data-res="0.5" class="res-btn py-2 rounded-xl bg-slate-800 border border-white/15 font-bold text-xs cursor-pointer">50%</button>
+                                <button data-res="0.75" class="res-btn py-2 rounded-xl bg-slate-800 border border-white/15 font-bold text-xs cursor-pointer">75%</button>
+                                <button data-res="1" class="res-btn py-2 rounded-xl bg-emerald-600 border border-emerald-300 font-bold text-xs cursor-pointer">100%</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- C. CONTROLLER & SENSITIVITY -->
+                <div class="bg-slate-900/60 p-4 rounded-2xl border border-white/10">
+                    <h3 class="font-game font-bold text-amber-300 mb-3">🎮 C. KAWALAN & KAMERA</h3>
+                    <div class="grid grid-cols-2 gap-2 mb-3">
+                        <button id="ctrl-keyboard" class="py-2.5 px-3 rounded-xl bg-emerald-600 border border-emerald-300 font-bold text-xs cursor-pointer">⌨️ Keyboard + Mouse</button>
+                        <button id="ctrl-touch" class="py-2.5 px-3 rounded-xl bg-slate-800 border border-white/15 font-bold text-xs cursor-pointer">📱 Touchscreen</button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span>Sensitiviti Kamera</span>
+                                <span id="val-sensitivity">1.0x</span>
+                            </div>
+                            <input id="slider-sensitivity" type="range" min="0.4" max="2.0" step="0.1" value="1.0" class="w-full accent-emerald-400 cursor-pointer">
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs mb-1">
+                                <span>Kelajuan Berjalan</span>
+                                <span id="val-speed">1.0x</span>
+                            </div>
+                            <input id="slider-speed" type="range" min="0.6" max="1.6" step="0.1" value="1.0" class="w-full accent-emerald-400 cursor-pointer">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- D. FULLSCREEN & RESET -->
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+                    <button id="btn-fullscreen" class="btn-game flex-1 py-2.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs sm:text-sm cursor-pointer">
+                        ⛶ SKRIN PENUH (FULLSCREEN)
+                    </button>
+                    <button id="btn-reset-request" class="btn-game flex-1 py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs sm:text-sm cursor-pointer">
+                        🔄 RESET PROGRESS
+                    </button>
+                </div>
+
+                <!-- Confirmation Box for Reset (No native confirm()) -->
+                <div id="reset-confirm-box" class="hidden p-3.5 rounded-2xl bg-rose-950/90 border border-rose-400 text-center">
+                    <p class="text-xs sm:text-sm font-semibold text-rose-100 mb-3">Adakah anda pasti mahu reset semua progress permainan?</p>
+                    <div class="flex justify-center gap-3">
+                        <button id="btn-reset-yes" class="px-4 py-1.5 rounded-xl bg-rose-500 hover:bg-rose-400 text-white font-bold text-xs cursor-pointer">Ya, Reset Semua</button>
+                        <button id="btn-reset-no" class="px-4 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs cursor-pointer">Batal</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. FINAL CELEBRATION MODAL (TAMAT PERMAINAN 5/5) -->
+    <div id="victory-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm overflow-y-auto">
+        <div class="glass-panel max-w-2xl w-full rounded-3xl p-6 sm:p-8 text-center text-white border-2 border-amber-400 relative overflow-hidden my-auto">
+            <div class="text-5xl sm:text-6xl mb-2 animate-bounce">🏆🌍✨</div>
+            <div class="inline-block px-4 py-1 rounded-full bg-emerald-500/30 border border-emerald-400 text-emerald-200 font-bold text-xs sm:text-sm mb-2">
+                5/5 CHECKPOINT COMPLETED
+            </div>
+            <h1 class="font-game text-2xl sm:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-lime-200 to-emerald-300 mb-3">
+                TAHNIAH, WIRA PENJAGA ALAM! 🌍
+            </h1>
+            <p class="text-slate-100 text-sm sm:text-base leading-relaxed bg-slate-900/60 p-4 rounded-2xl border border-white/15 mb-5">
+                “Kamu berjaya mengenal pasti amalan memelihara alam dan perbuatan yang mencemarkan atau merosakkan alam. Teruskan menjaga bumi dengan amalan yang baik sebagai khalifah Allah di muka bumi.”
+            </p>
+
+            <!-- Score & 5 Badges Display -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                <div class="bg-slate-900/75 rounded-2xl p-4 border border-amber-400/40 flex flex-col justify-center">
+                    <span class="text-xs uppercase tracking-wider text-amber-300 font-bold">Jumlah Markah Akhir</span>
+                    <span id="victory-total-score" class="font-game text-4xl font-bold text-white mt-1">500</span>
+                </div>
+                <div class="bg-slate-900/75 rounded-2xl p-4 border border-emerald-400/40">
+                    <span class="text-xs uppercase tracking-wider text-emerald-300 font-bold block mb-2">5 Lencana Penjaga Alam</span>
+                    <div class="flex justify-center gap-2 text-2xl">
+                        <span class="w-10 h-10 rounded-full bg-emerald-500/30 border border-emerald-400 flex items-center justify-center" title="Penjaga Hutan">🌳</span>
+                        <span class="w-10 h-10 rounded-full bg-sky-500/30 border border-sky-400 flex items-center justify-center" title="Penjaga Sungai">🌊</span>
+                        <span class="w-10 h-10 rounded-full bg-teal-500/30 border border-teal-400 flex items-center justify-center" title="Penjaga Udara">🚲</span>
+                        <span class="w-10 h-10 rounded-full bg-amber-500/30 border border-amber-400 flex items-center justify-center" title="Penjaga Kediaman">🏡</span>
+                        <span class="w-10 h-10 rounded-full bg-lime-500/30 border border-lime-400 flex items-center justify-center" title="Penjaga Pertanian">🌱</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                <button id="btn-play-again" class="btn-game flex-1 py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-base sm:text-lg cursor-pointer">
+                    🔄 MAIN SEMULA
+                </button>
+                <button id="btn-back-main-menu" class="btn-game flex-1 py-3.5 px-6 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-base sm:text-lg cursor-pointer">
+                    🏠 KEMBALI KE MENU UTAMA
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    /**
+     * ============================================================================
+     * ECO QUEST: MISI PENJAGA ALAM (Pendidikan Islam Tahun 5)
+     * Single-File 3D First-Person Exploration & Context-Matching Puzzle Game
+     * ============================================================================
+     */
+
+    // ============================================================================
+    // 1. WEB AUDIO API SYNTHESIZER (Muzik Latar Ceria & Kesan Bunyi Tanpa Fail Luar)
+    // ============================================================================
+    class SoundSystem {
+        constructor() {
+            this.ctx = null;
+            this.musicEnabled = true;
+            this.sfxEnabled = true;
+            this.musicVolume = 0.45;
+            this.sfxVolume = 0.75;
+            this.isPlayingMusic = false;
+            this.musicInterval = null;
+            this.stepIndex = 0;
+        }
+
+        init() {
+            if (!this.ctx) {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioCtx();
+            }
+            if (this.ctx.state === 'suspended') {
+                this.ctx.resume();
+            }
+        }
+
+        startMusic() {
+            this.init();
+            if (this.isPlayingMusic) return;
+            this.isPlayingMusic = true;
+
+            // Melodi ceria skala pentatonik major (C5, D5, E5, G5, A5, C6)
+            const melody = [
+                523.25, 659.25, 783.99, 659.25,
+                587.33, 659.25, 523.25, 392.00,
+                523.25, 659.25, 880.00, 783.99,
+                659.25, 587.33, 523.25, 0
+            ];
+            const bass = [
+                261.63, 0, 196.00, 0,
+                293.66, 0, 196.00, 0,
+                261.63, 0, 220.00, 0,
+                196.00, 0, 261.63, 0
+            ];
+
+            this.musicInterval = setInterval(() => {
+                if (!this.musicEnabled || !this.ctx || this.ctx.state !== 'running') return;
+                const now = this.ctx.currentTime;
+                const note = melody[this.stepIndex % melody.length];
+                const bassNote = bass[this.stepIndex % bass.length];
+
+                if (note > 0) {
+                    this.playTone(note, 'sine', 0.35, this.musicVolume * 0.14, now);
+                }
+                if (bassNote > 0) {
+                    this.playTone(bassNote, 'triangle', 0.45, this.musicVolume * 0.12, now);
+                }
+
+                // Bunyi kicauan burung lembut sekali-sekala
+                if (this.stepIndex % 16 === 7 && Math.random() > 0.35) {
+                    this.playBirdChirp(now + 0.1);
+                }
+
+                this.stepIndex++;
+            }, 360);
+        }
+
+        playTone(freq, type, duration, vol, startTime = null) {
+            if (!this.ctx) return;
+            const t = startTime || this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, t);
+
+            gain.gain.setValueAtTime(0.001, t);
+            gain.gain.exponentialRampToValueAtTime(Math.max(0.001, vol), t + 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + duration + 0.02);
+        }
+
+        playBirdChirp(t) {
+            if (!this.ctx || !this.musicEnabled) return;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(1800, t);
+            osc.frequency.exponentialRampToValueAtTime(2600, t + 0.08);
+            osc.frequency.exponentialRampToValueAtTime(2100, t + 0.15);
+
+            const vol = this.musicVolume * 0.05;
+            gain.gain.setValueAtTime(0.001, t);
+            gain.gain.exponentialRampToValueAtTime(Math.max(0.001, vol), t + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(t);
+            osc.stop(t + 0.18);
+        }
+
+        playSFX(type) {
+            if (!this.sfxEnabled) return;
+            this.init();
+            const now = this.ctx.currentTime;
+            const v = this.sfxVolume;
+
+            switch (type) {
+                case 'tap':
+                    this.playTone(620, 'sine', 0.09, v * 0.25, now);
+                    break;
+                case 'drag':
+                    this.playTone(440, 'sine', 0.08, v * 0.18, now);
+                    this.playTone(550, 'sine', 0.08, v * 0.18, now + 0.04);
+                    break;
+                case 'checkpoint':
+                    this.playTone(523.25, 'triangle', 0.18, v * 0.28, now);
+                    this.playTone(659.25, 'triangle', 0.18, v * 0.28, now + 0.1);
+                    this.playTone(783.99, 'triangle', 0.28, v * 0.3, now + 0.2);
+                    break;
+                case 'correct':
+                    [523.25, 659.25, 783.99, 1046.50].forEach((f, idx) => {
+                        this.playTone(f, 'triangle', 0.35, v * 0.32, now + idx * 0.09);
+                    });
+                    break;
+                case 'wrong':
+                    this.playTone(220, 'sawtooth', 0.18, v * 0.22, now);
+                    this.playTone(175, 'sawtooth', 0.25, v * 0.22, now + 0.14);
+                    break;
+                case 'victory':
+                    const notes = [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50];
+                    notes.forEach((f, idx) => {
+                        this.playTone(f, 'triangle', 0.35, v * 0.35, now + idx * 0.13);
+                    });
+                    break;
+            }
+        }
+    }
+
+    const audio = new SoundSystem();
+
+    // ============================================================================
+    // 2. PEMETAAN PAUTAN IMEJ CLOUDINARY & PENJANA TAG IMG DENGAN FALLBACK
+    // ============================================================================
+    const IMG_URLS = {
+        // Checkpoint 1 - Hutan
+        cp1_main: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515050/photo_6062116854366409633_w.jpg",
+        cp1_optA: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515049/photo_6062116854366409632_w.jpg",
+        cp1_optB: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515050/photo_6062116854366409631_w.jpg",
+        cp1_optC: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515048/photo_6062116854366409639_w.jpg",
+        cp1_optD: "https://res.cloudinary.com/lzlce78k/image/upload/v1795514994/photo_6062116854366409630_w.jpg",
+
+        // Checkpoint 2 - Sungai
+        cp2_main: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515048/photo_6062116854366409641_w.jpg",
+        cp2_optA: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515047/photo_6062116854366409642_w.jpg",
+        cp2_optB: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515047/photo_6062116854366409643_w.jpg",
+        cp2_optC: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515047/photo_6062116854366409644_w.jpg",
+        cp2_optD: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515046/photo_6062116854366409645_w.jpg",
+
+        // Checkpoint 3 - Udara dan Kawasan Jalan Raya
+        cp3_main: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515046/photo_6062116854366409646_w.jpg",
+        cp3_optA: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515046/photo_6062116854366409647_w.jpg",
+        cp3_optB: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515046/photo_6062116854366409648_w.jpg",
+        cp3_optC: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515046/photo_6062116854366409649_w.jpg",
+        cp3_optD: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515049/photo_6062116854366409636_w.jpg",
+
+        // Checkpoint 4 - Kawasan Kediaman
+        cp4_main: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515050/photo_6062116854366409634_w.jpg",
+        cp4_optA: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515049/photo_6062116854366409635_w.jpg",
+        cp4_optB: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515049/photo_6062116854366409636_w.jpg",
+        cp4_optC: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515048/photo_6062116854366409637_w.jpg",
+        cp4_optD: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515049/photo_6062116854366409638_w.jpg",
+
+        // Checkpoint 5 - Kawasan Pertanian
+        cp5_main: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515045/photo_6062116854366409650_w.jpg",
+        cp5_optA: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515045/photo_6062116854366409651_w.jpg",
+        cp5_optB: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515046/photo_6062116854366409652_w.jpg",
+        cp5_optC: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515046/photo_6062116854366409645_w.jpg",
+        cp5_optD: "https://res.cloudinary.com/lzlce78k/image/upload/v1795515051/photo_6062116854366409653_w.jpg"
+    };
+
+    // Fungsi menjana elemen <img> responsif dengan pointer-events-none dan fallback automatik
+    function renderCardImage(url, altText) {
+        const safeText = encodeURIComponent(altText.slice(0, 28));
+        const fallbackUrl = `https://placehold.co/400x300/e2e8f0/1e293b?text=${safeText}`;
+        return `<img src="${url}" alt="${altText}" draggable="false" loading="eager" onerror="this.onerror=null;this.src='${fallbackUrl}';" class="w-full h-full object-cover pointer-events-none select-none" />`;
+    }
+
+    // Pra-muat kesemua gambar Cloudinary semasa skrin loading
+    function preloadPuzzleImages(onProgress) {
+        const uniqueUrls = [...new Set(Object.values(IMG_URLS))];
+        let loaded = 0;
+        const total = uniqueUrls.length;
+
+        return new Promise((resolve) => {
+            if (total === 0) return resolve();
+
+            const checkDone = () => {
+                loaded++;
+                if (onProgress) onProgress(loaded, total);
+                if (loaded >= total) resolve();
+            };
+
+            uniqueUrls.forEach((src) => {
+                const img = new Image();
+                img.onload = checkDone;
+                img.onerror = checkDone;
+                img.src = src;
+            });
+
+            // Had masa keselamatan (maksimum 3.5 saat) supaya game tidak tersangkut jika rangkaian perlahan
+            setTimeout(resolve, 3500);
+        });
+    }
+
+    // ============================================================================
+    // 3. DATA LENGKAP 5 CHECKPOINT & PUZZLE PADANAN (MENGGUNAKAN GAMBAR SEBENAR)
+    // ============================================================================
+    const CHECKPOINTS_DATA = [
+        {
+            id: 0,
+            code: "CHECKPOINT 1",
+            name: "CHECKPOINT 1 – HUTAN 🌳",
+            shortName: "Hutan 🌳",
+            pos: { x: -34, z: -32 },
+            mainImg: IMG_URLS.cp1_main,
+            mainCaption: "Menanam semula anak pokok di kawasan hutan",
+            hint: "Perhatikan tindakan yang dilakukan terhadap kawasan hutan.",
+            explanation: "Penanaman semula pokok membantu memulihkan hutan, manakala pembakaran hutan merosakkan tumbuhan, habitat haiwan dan alam sekitar.",
+            options: [
+                { id: "A", img: IMG_URLS.cp1_optA, caption: "Pembakaran hutan yang dipenuhi asap dan pokok terbakar", isCorrect: true },
+                { id: "B", img: IMG_URLS.cp1_optB, caption: "Sungai yang dipenuhi botol plastik", isCorrect: false },
+                { id: "C", img: IMG_URLS.cp1_optC, caption: "Individu membuang sampah ke dalam tong", isCorrect: false },
+                { id: "D", img: IMG_URLS.cp1_optD, caption: "Lampu rumah yang ditutup", isCorrect: false }
+            ]
+        },
+        {
+            id: 1,
+            code: "CHECKPOINT 2",
+            name: "CHECKPOINT 2 – SUNGAI 🌊",
+            shortName: "Sungai 🌊",
+            pos: { x: 24, z: -12 },
+            mainImg: IMG_URLS.cp2_main,
+            mainCaption: "Membersihkan sungai dan mengutip sampah ke dalam tong",
+            hint: "Lihat keadaan air sungai dan tindakan yang merosakkannya.",
+            explanation: "Membersihkan sungai membantu menjaga kebersihan air, manakala membuang sampah dan sisa ke dalam sungai menyebabkan pencemaran air serta menjejaskan hidupan akuatik.",
+            options: [
+                { id: "A", img: IMG_URLS.cp2_optA, caption: "Membakar sampah di kawasan lapang", isCorrect: false },
+                { id: "B", img: IMG_URLS.cp2_optB, caption: "Membuang sisa dan sampah ke dalam sungai", isCorrect: true },
+                { id: "C", img: IMG_URLS.cp2_optC, caption: "Individu menanam bunga di taman", isCorrect: false },
+                { id: "D", img: IMG_URLS.cp2_optD, caption: "Individu mematikan lampu", isCorrect: false }
+            ]
+        },
+        {
+            id: 2,
+            code: "CHECKPOINT 3",
+            name: "CHECKPOINT 3 – UDARA DAN KAWASAN JALAN RAYA 🚗",
+            shortName: "Jalan Raya 🚲",
+            pos: { x: 32, z: 28 },
+            mainImg: IMG_URLS.cp3_main,
+            mainCaption: "Menggunakan basikal untuk perjalanan berhampiran",
+            hint: "Bandingkan kesan pengangkutan terhadap kebersihan udara.",
+            explanation: "Penggunaan basikal bagi perjalanan dekat dapat mengurangkan penggunaan kenderaan bermotor, manakala asap kenderaan yang berlebihan mencemarkan udara dan menjejaskan kesihatan.",
+            options: [
+                { id: "A", img: IMG_URLS.cp3_optA, caption: "Kenderaan mengeluarkan asap hitam tebal ke udara", isCorrect: true },
+                { id: "B", img: IMG_URLS.cp3_optB, caption: "Individu menyiram tanaman", isCorrect: false },
+                { id: "C", img: IMG_URLS.cp3_optC, caption: "Individu mengasingkan botol plastik", isCorrect: false },
+                { id: "D", img: IMG_URLS.cp3_optD, caption: "Individu menanam pokok", isCorrect: false }
+            ]
+        },
+        {
+            id: 3,
+            code: "CHECKPOINT 4",
+            name: "CHECKPOINT 4 – KAWASAN KEDIAMAN 🏡",
+            shortName: "Kediaman 🏡",
+            pos: { x: -28, z: 24 },
+            mainImg: IMG_URLS.cp4_main,
+            mainCaption: "Membersihkan halaman rumah dan mengasingkan sampah",
+            hint: "Fokus pada kebersihan kawasan halaman rumah.",
+            explanation: "Membersihkan halaman dan membuang sampah di tempat yang betul membantu menjaga kebersihan kawasan kediaman, manakala membuang sampah merata-rata menyebabkan pencemaran dan mengganggu keselesaan penduduk.",
+            options: [
+                { id: "A", img: IMG_URLS.cp4_optA, caption: "Membuang sampah merata-rata di halaman rumah", isCorrect: true },
+                { id: "B", img: IMG_URLS.cp4_optB, caption: "Individu menanam pokok", isCorrect: false },
+                { id: "C", img: IMG_URLS.cp4_optC, caption: "Individu menutup paip air", isCorrect: false },
+                { id: "D", img: IMG_URLS.cp4_optD, caption: "Individu mengutip sampah", isCorrect: false }
+            ]
+        },
+        {
+            id: 4,
+            code: "CHECKPOINT 5",
+            name: "CHECKPOINT 5 – KAWASAN PERTANIAN 🌱",
+            shortName: "Pertanian 🌱",
+            pos: { x: -4, z: -42 },
+            mainImg: IMG_URLS.cp5_main,
+            mainCaption: "Menggunakan baja kompos organik pada tanaman kebun",
+            hint: "Perhatikan bahan yang digunakan pada tanah dan tanaman di kebun.",
+            explanation: "Penggunaan kompos dapat membantu menyuburkan tanah, manakala penggunaan atau pembuangan bahan kimia secara tidak terkawal boleh mencemarkan tanah dan air serta menjejaskan ekosistem.",
+            options: [
+                { id: "A", img: IMG_URLS.cp5_optA, caption: "Membuang bahan kimia berlebihan ke tanah tanaman", isCorrect: true },
+                { id: "B", img: IMG_URLS.cp5_optB, caption: "Membuang botol ke dalam tong kitar semula", isCorrect: false },
+                { id: "C", img: IMG_URLS.cp5_optC, caption: "Individu mematikan lampu", isCorrect: false },
+                { id: "D", img: IMG_URLS.cp5_optD, caption: "Individu membersihkan sungai", isCorrect: false }
+            ]
+        }
+    ];
+
+    // ============================================================================
+    // 4. GAME STATE & SETTINGS MANAGEMENT
+    // ============================================================================
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
+    const gameState = {
+        mode: 'menu', // 'menu', 'playing', 'puzzle', 'settings', 'victory'
+        score: 0,
+        completed: [false, false, false, false, false],
+        activeCheckpoint: null,
+        nearestCheckpoint: null,
+        puzzleAttempts: 1,
+        hintUsed: false,
+        celebrationTriggered: false,
+        settings: {
+            quality: 'medium', // 'low', 'medium', 'high'
+            resolution: 1.0,   // 0.5, 0.75, 1.0
+            controller: isTouchDevice ? 'touch' : 'keyboard', // 'keyboard', 'touch'
+            sensitivity: 1.0,
+            speed: 1.0
+        }
+    };
+
+    // ============================================================================
+    // 5. THREE.JS 3D WORLD SETUP (Stylized Low-Poly Nature World)
+    // ============================================================================
+    const canvas = document.getElementById('game-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2) * gameState.settings.resolution);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+    scene.fog = new THREE.FogExp2(0xa5f3fc, 0.0085);
+
+    const camera = new THREE.PerspectiveCamera(68, window.innerWidth / window.innerHeight, 0.2, 220);
+    camera.rotation.order = 'YXZ'; // Penting untuk FPS camera yaw & pitch
+
+    // Player Physics & Transform
+    const player = {
+        pos: new THREE.Vector3(0, 1.8, 12),
+        yaw: Math.PI, // Menghadap utara (-Z)
+        pitch: 0,
+        baseSpeed: 9.5,
+        radius: 0.7
+    };
+    camera.position.copy(player.pos);
+
+    // Lighting
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x4ade80, 0.75);
+    hemiLight.position.set(0, 50, 0);
+    scene.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(0xfffbeb, 1.15);
+    dirLight.position.set(35, 55, 25);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 1024;
+    dirLight.shadow.mapSize.height = 1024;
+    dirLight.shadow.camera.near = 5;
+    dirLight.shadow.camera.far = 140;
+    const d = 55;
+    dirLight.shadow.camera.left = -d;
+    dirLight.shadow.camera.right = d;
+    dirLight.shadow.camera.top = d;
+    dirLight.shadow.camera.bottom = -d;
+    scene.add(dirLight);
+
+    // Collections for Animation & Collisions
+    const animatedTrees = [];
+    const clouds = [];
+    const birds = [];
+    const flowers = [];
+    const colliders = []; // { x, z, r }
+    const checkpointMeshes = [];
+    const pollutionObjects = [[], [], [], [], []]; // Objek pencemaran per checkpoint yang akan hilang bila selesai
+    let celebrationParticles = null;
+    let riverMesh = null;
+
+    // Helper: Create Label Sprite
+    function createTextSprite(text, bgColor = 'rgba(15, 23, 42, 0.85)', borderColor = '#fbbf24') {
+        const c = document.createElement('canvas');
+        c.width = 512;
+        c.height = 128;
+        const ctx = c.getContext('2d');
+
+        // Rounded Pill Background
+        ctx.fillStyle = bgColor;
+        ctx.beginPath();
+        ctx.roundRect(16, 16, 480, 96, 48);
+        ctx.fill();
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = borderColor;
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 34px Fredoka, Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, 256, 66);
+
+        const tex = new THREE.CanvasTexture(c);
+        const mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+        const sprite = new THREE.Sprite(mat);
+        sprite.scale.set(5.5, 1.38, 1);
+        return sprite;
+    }
+
+    // Build Ground, River, Bridge, Pathways & Zones
+    function buildWorld() {
+        // 1. Padang Rumput Utama
+        const groundGeo = new THREE.PlaneGeometry(160, 160, 32, 32);
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x4ade80, roughness: 0.85 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Bukit-bukit rendah di sempadan dunia
+        const hillMat = new THREE.MeshStandardMaterial({ color: 0x22c55e, roughness: 0.9 });
+        for (let i = 0; i < 24; i++) {
+            const angle = (i / 24) * Math.PI * 2;
+            const dist = 62 + (i % 3) * 6;
+            const hill = new THREE.Mesh(new THREE.ConeGeometry(12 + (i % 4) * 3, 10 + (i % 3) * 4, 7), hillMat);
+            hill.position.set(Math.cos(angle) * dist, 4, Math.sin(angle) * dist);
+            scene.add(hill);
+        }
+
+        // 2. Sungai (Merentasi kawasan timur x = 14)
+        const riverGeo = new THREE.PlaneGeometry(8, 130, 12, 40);
+        const riverMat = new THREE.MeshStandardMaterial({
+            color: 0x38bdf8,
+            roughness: 0.2,
+            metalness: 0.1
+        });
+        riverMesh = new THREE.Mesh(riverGeo, riverMat);
+        riverMesh.rotation.x = -Math.PI / 2;
+        riverMesh.position.set(14, 0.06, 0);
+        riverMesh.receiveShadow = true;
+        scene.add(riverMesh);
+
+        // Tebing Sungai
+        const bankMat = new THREE.MeshStandardMaterial({ color: 0xd6d3d1, roughness: 0.9 });
+        const bankL = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.25, 130), bankMat);
+        bankL.position.set(10, 0.1, 0);
+        scene.add(bankL);
+        const bankR = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.25, 130), bankMat);
+        bankR.position.set(18, 0.1, 0);
+        scene.add(bankR);
+
+        // 3. Jambatan Kayu Melintasi Sungai (z = -12)
+        const bridgeGroup = new THREE.Group();
+        const woodMat = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.8 });
+        const bridgeDeck = new THREE.Mesh(new THREE.BoxGeometry(11, 0.35, 4.2), woodMat);
+        bridgeDeck.position.set(14, 0.3, -12);
+        bridgeDeck.castShadow = true;
+        bridgeDeck.receiveShadow = true;
+        bridgeGroup.add(bridgeDeck);
+
+        // Tiang & Pagar Jambatan
+        [-1.9, 1.9].forEach(zOff => {
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(11, 0.15, 0.15), woodMat);
+            rail.position.set(14, 1.1, -12 + zOff);
+            bridgeGroup.add(rail);
+            [9, 14, 19].forEach(xPost => {
+                const post = new THREE.Mesh(new THREE.BoxGeometry(0.22, 1.0, 0.22), woodMat);
+                post.position.set(xPost, 0.7, -12 + zOff);
+                bridgeGroup.add(post);
+            });
+        });
+        scene.add(bridgeGroup);
+
+        // 4. Laluan Pejalan Kaki (Pathways) & Jalan Raya
+        const pathMat = new THREE.MeshStandardMaterial({ color: 0xfde68a, roughness: 0.9 });
+        const paths = [
+            { x: 0, z: -12, w: 3, d: 65 },
+            { x: -16, z: -22, w: 32, d: 3 },
+            { x: 6, z: -12, w: 28, d: 3 },
+            { x: -14, z: 18, w: 30, d: 3 }
+        ];
+        paths.forEach(p => {
+            const m = new THREE.Mesh(new THREE.PlaneGeometry(p.w, p.d), pathMat);
+            m.rotation.x = -Math.PI / 2;
+            m.position.set(p.x, 0.03, p.z);
+            m.receiveShadow = true;
+            scene.add(m);
+        });
+
+        // Jalan Raya Berasfalt di Tenggara (Checkpoint 3)
+        const roadMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.85 });
+        const road = new THREE.Mesh(new THREE.PlaneGeometry(34, 7), roadMat);
+        road.rotation.x = -Math.PI / 2;
+        road.position.set(34, 0.04, 28);
+        road.receiveShadow = true;
+        scene.add(road);
+
+        // Garisan Putih Jalan
+        for (let rx = 20; rx <= 48; rx += 5) {
+            const stripe = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.35), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+            stripe.rotation.x = -Math.PI / 2;
+            stripe.position.set(rx, 0.05, 28);
+            scene.add(stripe);
+        }
+
+        // 5. Kawasan Perkampungan (Checkpoint 4: x = -28, z = 24)
+        buildHouse(-36, 18, 0xfef3c7, 0xef4444);
+        buildHouse(-36, 32, 0xe0f2fe, 0x2563eb);
+        buildHouse(-20, 34, 0xfce7f3, 0xd97706);
+
+        // 6. Kawasan Pertanian / Kebun Sayur (Checkpoint 5: x = -4, z = -42)
+        const soilMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.95 });
+        for (let row = 0; row < 4; row++) {
+            const bed = new THREE.Mesh(new THREE.BoxGeometry(12, 0.25, 1.4), soilMat);
+            bed.position.set(-4, 0.12, -37 - row * 3);
+            bed.receiveShadow = true;
+            scene.add(bed);
+
+            // Tanaman Sayur Hijau
+            for (let col = -5; col <= 5; col += 1.6) {
+                const veg = new THREE.Mesh(
+                    new THREE.DodecahedronGeometry(0.45, 0),
+                    new THREE.MeshStandardMaterial({ color: 0x16a34a })
+                );
+                veg.position.set(-4 + col, 0.45, -37 - row * 3);
+                veg.castShadow = true;
+                scene.add(veg);
+            }
+        }
+
+        // 7. Basikal & Kereta di Kawasan Jalan Raya (Checkpoint 3)
+        buildVehicle(26, 26.5, 0x10b981); // Kereta hijau bersih
+        buildVehicle(40, 29.5, 0xef4444); // Kereta merah (berasap sebelum CP3 selesai)
+
+        // 8. Pokok Hutan Low-Poly & Bunga Warna-Warni
+        const treeCoords = [
+            [-38, -36], [-30, -38], [-42, -28], [-26, -28], [-35, -22], // Hutan CP1
+            [-45, -10], [-42, 5], [-46, 20], [-40, 42], [-20, 44],
+            [22, -36], [32, -32], [38, -20], [28, 2], [44, 10],
+            [45, 40], [22, 42], [4, 38], [-12, -28], [8, -28]
+        ];
+        treeCoords.forEach(([tx, tz], idx) => {
+            createLowPolyTree(tx, tz, 0.85 + (idx % 4) * 0.2);
+        });
+
+        // Bunga-bunga comel
+        const flowerColors = [0xf43f5e, 0xfacc15, 0xa855f7, 0xf97316, 0xec4899];
+        for (let i = 0; i < 65; i++) {
+            const fx = (Math.random() - 0.5) * 95;
+            const fz = (Math.random() - 0.5) * 95;
+            if (Math.abs(fx - 14) < 5.5) continue; // Elak dalam sungai
+            createFlower(fx, fz, flowerColors[i % flowerColors.length]);
+        }
+
+        // 9. Awan Bergerak & Burung Terbang
+        for (let i = 0; i < 10; i++) {
+            createCloud((Math.random() - 0.5) * 120, 26 + Math.random() * 10, (Math.random() - 0.5) * 120);
+        }
+        for (let i = 0; i < 8; i++) {
+            createBird(i);
+        }
+
+        // 10. Objek Pencemaran Awal (Hilang apabila checkpoint berkaitan selesai!)
+        // CP1 (Hutan): Tunggul terbakar & asap kelabu
+        for (let i = 0; i < 4; i++) {
+            const burnt = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.3, 0.4, 1.5, 6),
+                new THREE.MeshStandardMaterial({ color: 0x1c1917 })
+            );
+            burnt.position.set(-37 + i * 2.2, 0.75, -35 + (i % 2) * 2);
+            scene.add(burnt);
+            pollutionObjects[0].push(burnt);
+        }
+        // CP2 (Sungai): Sampah terapung di tepi sungai
+        for (let i = 0; i < 6; i++) {
+            const trash = new THREE.Mesh(
+                new THREE.BoxGeometry(0.5, 0.35, 0.5),
+                new THREE.MeshStandardMaterial({ color: i % 2 === 0 ? 0xef4444 : 0x334155 })
+            );
+            trash.position.set(12.5 + (i % 3) * 1.3, 0.2, -16 + i * 1.6);
+            scene.add(trash);
+            pollutionObjects[1].push(trash);
+        }
+        // CP3 (Jalan): Asap hitam di atas kereta merah
+        for (let i = 0; i < 5; i++) {
+            const smoke = new THREE.Mesh(
+                new THREE.DodecahedronGeometry(0.6 + i * 0.15, 0),
+                new THREE.MeshStandardMaterial({ color: 0x1e293b, transparent: true, opacity: 0.75 })
+            );
+            smoke.position.set(42.5 + i * 0.4, 1.4 + i * 0.7, 29.5);
+            scene.add(smoke);
+            pollutionObjects[2].push(smoke);
+        }
+        // CP4 (Kediaman): Sampah bersepah di halaman
+        for (let i = 0; i < 6; i++) {
+            const litter = new THREE.Mesh(
+                new THREE.DodecahedronGeometry(0.35, 0),
+                new THREE.MeshStandardMaterial({ color: 0x475569 })
+            );
+            litter.position.set(-31 + i * 1.4, 0.25, 21 + (i % 2) * 3);
+            scene.add(litter);
+            pollutionObjects[3].push(litter);
+        }
+        // CP5 (Pertanian): Tong bahan kimia ungu di kebun
+        for (let i = 0; i < 3; i++) {
+            const barrel = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.45, 0.45, 1.1, 10),
+                new THREE.MeshStandardMaterial({ color: 0xa855f7 })
+            );
+            barrel.position.set(-8 + i * 1.5, 0.55, -45);
+            scene.add(barrel);
+            pollutionObjects[4].push(barrel);
+        }
+
+        // 11. Bina 5 Checkpoint Beacons & Papan Tanda
+        buildCheckpoints3D();
+    }
+
+    function createLowPolyTree(x, z, scale = 1) {
+        const group = new THREE.Group();
+        const trunk = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.35 * scale, 0.5 * scale, 2.4 * scale, 6),
+            new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.9 })
+        );
+        trunk.position.y = 1.2 * scale;
+        trunk.castShadow = true;
+        group.add(trunk);
+
+        const foliage = new THREE.Group();
+        const leafMat = new THREE.MeshStandardMaterial({ color: 0x16a34a, roughness: 0.75 });
+        const c1 = new THREE.Mesh(new THREE.ConeGeometry(2.1 * scale, 3.2 * scale, 7), leafMat);
+        c1.position.y = 3.2 * scale;
+        c1.castShadow = true;
+        const c2 = new THREE.Mesh(new THREE.ConeGeometry(1.5 * scale, 2.6 * scale, 7), new THREE.MeshStandardMaterial({ color: 0x22c55e }));
+        c2.position.y = 4.6 * scale;
+        c2.castShadow = true;
+        foliage.add(c1, c2);
+        group.add(foliage);
+
+        group.position.set(x, 0, z);
+        scene.add(group);
+        animatedTrees.push({ foliage, phase: Math.random() * Math.PI * 2 });
+        colliders.push({ x, z, r: 0.8 * scale });
+    }
+
+    function buildHouse(x, z, wallColor, roofColor) {
+        const group = new THREE.Group();
+        const walls = new THREE.Mesh(
+            new THREE.BoxGeometry(5.5, 3.6, 5),
+            new THREE.MeshStandardMaterial({ color: wallColor, roughness: 0.8 })
+        );
+        walls.position.y = 1.8;
+        walls.castShadow = true;
+        walls.receiveShadow = true;
+        group.add(walls);
+
+        const roof = new THREE.Mesh(
+            new THREE.ConeGeometry(4.4, 2.4, 4),
+            new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.7 })
+        );
+        roof.position.y = 4.8;
+        roof.rotation.y = Math.PI / 4;
+        roof.castShadow = true;
+        group.add(roof);
+
+        const door = new THREE.Mesh(
+            new THREE.BoxGeometry(1.1, 2.0, 0.2),
+            new THREE.MeshStandardMaterial({ color: 0x78350f })
+        );
+        door.position.set(0, 1.0, 2.55);
+        group.add(door);
+
+        group.position.set(x, 0, z);
+        scene.add(group);
+        colliders.push({ x, z, r: 3.4 });
+    }
+
+    function buildVehicle(x, z, color) {
+        const group = new THREE.Group();
+        const body = new THREE.Mesh(
+            new THREE.BoxGeometry(3.4, 1.0, 1.8),
+            new THREE.MeshStandardMaterial({ color })
+        );
+        body.position.y = 0.8;
+        body.castShadow = true;
+        group.add(body);
+
+        const cabin = new THREE.Mesh(
+            new THREE.BoxGeometry(1.8, 0.8, 1.5),
+            new THREE.MeshStandardMaterial({ color: 0xe0f2fe })
+        );
+        cabin.position.set(-0.2, 1.6, 0);
+        group.add(cabin);
+
+        group.position.set(x, 0, z);
+        scene.add(group);
+        colliders.push({ x, z, r: 2.0 });
+    }
+
+    function createFlower(x, z, color) {
+        const group = new THREE.Group();
+        const stem = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.04, 0.04, 0.45, 5),
+            new THREE.MeshBasicMaterial({ color: 0x15803d })
+        );
+        stem.position.y = 0.22;
+        const head = new THREE.Mesh(
+            new THREE.DodecahedronGeometry(0.18, 0),
+            new THREE.MeshStandardMaterial({ color })
+        );
+        head.position.y = 0.48;
+        group.add(stem, head);
+        group.position.set(x, 0, z);
+        scene.add(group);
+        flowers.push(group);
+    }
+
+    function createCloud(x, y, z) {
+        const group = new THREE.Group();
+        const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
+        for (let i = 0; i < 4; i++) {
+            const puff = new THREE.Mesh(new THREE.DodecahedronGeometry(2.2 + (i % 2), 1), mat);
+            puff.position.set((i - 1.5) * 2.1, (i % 2) * 0.6, (i % 3) * 0.8);
+            group.add(puff);
+        }
+        group.position.set(x, y, z);
+        scene.add(group);
+        clouds.push(group);
+    }
+
+    function createBird(idx) {
+        const bird = new THREE.Group();
+        const wingMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide });
+        const leftWing = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.25), wingMat);
+        leftWing.position.x = -0.3;
+        const rightWing = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.25), wingMat);
+        rightWing.position.x = 0.3;
+        bird.add(leftWing, rightWing);
+        scene.add(bird);
+        birds.push({
+            mesh: bird,
+            leftWing,
+            rightWing,
+            angle: (idx / 8) * Math.PI * 2,
+            radius: 18 + (idx % 3) * 10,
+            height: 12 + (idx % 4) * 2.5,
+            speed: 0.25 + (idx % 3) * 0.08
+        });
+    }
+
+    function buildCheckpoints3D() {
+        CHECKPOINTS_DATA.forEach((cp, index) => {
+            const group = new THREE.Group();
+            group.position.set(cp.pos.x, 0, cp.pos.z);
+
+            // Tapak Platform Bercahaya
+            const padMat = new THREE.MeshStandardMaterial({
+                color: 0xf59e0b,
+                emissive: 0xd97706,
+                emissiveIntensity: 0.5
+            });
+            const pad = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.7, 0.25, 24), padMat);
+            pad.position.y = 0.12;
+            pad.receiveShadow = true;
+            group.add(pad);
+
+            // Tiang Cahaya (Beacon Beam) Menjulang ke Langit
+            const beamMat = new THREE.MeshBasicMaterial({
+                color: 0xfbbf24,
+                transparent: true,
+                opacity: 0.28,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            });
+            const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.8, 28, 16, 1, true), beamMat);
+            beam.position.y = 14;
+            group.add(beam);
+
+            // Ikon Kristal 3D Terapung
+            const crystalMat = new THREE.MeshStandardMaterial({
+                color: 0xfbbf24,
+                emissive: 0xf59e0b,
+                emissiveIntensity: 0.6,
+                roughness: 0.2
+            });
+            const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.95, 0), crystalMat);
+            crystal.position.y = 2.6;
+            group.add(crystal);
+
+            // Papan Nama Lokasi Floating Sprite
+            const labelSprite = createTextSprite(cp.shortName, 'rgba(15, 23, 42, 0.88)', '#fbbf24');
+            labelSprite.position.y = 4.4;
+            group.add(labelSprite);
+
+            scene.add(group);
+            checkpointMeshes.push({
+                index,
+                group,
+                pad,
+                padMat,
+                beam,
+                beamMat,
+                crystal,
+                crystalMat,
+                labelSprite
+            });
+        });
+    }
+
+    function updateCheckpointVisuals(index, isDone) {
+        const cpObj = checkpointMeshes[index];
+        if (!cpObj) return;
+
+        // Buang label lama dan gantikan
+        cpObj.group.remove(cpObj.labelSprite);
+
+        if (isDone) {
+            cpObj.padMat.color.setHex(0x10b981);
+            cpObj.padMat.emissive.setHex(0x059669);
+            cpObj.beamMat.color.setHex(0x34d399);
+            cpObj.beamMat.opacity = 0.18;
+            cpObj.crystalMat.color.setHex(0x10b981);
+            cpObj.crystalMat.emissive.setHex(0x059669);
+            cpObj.labelSprite = createTextSprite(`✔ ${CHECKPOINTS_DATA[index].shortName}`, 'rgba(6, 78, 59, 0.92)', '#34d399');
+
+            // Hilangkan objek pencemaran di kawasan checkpoint ini
+            pollutionObjects[index].forEach(obj => {
+                obj.visible = false;
+            });
+        } else {
+            cpObj.padMat.color.setHex(0xf59e0b);
+            cpObj.padMat.emissive.setHex(0xd97706);
+            cpObj.beamMat.color.setHex(0xfbbf24);
+            cpObj.beamMat.opacity = 0.28;
+            cpObj.crystalMat.color.setHex(0xfbbf24);
+            cpObj.crystalMat.emissive.setHex(0xf59e0b);
+            cpObj.labelSprite = createTextSprite(CHECKPOINTS_DATA[index].shortName, 'rgba(15, 23, 42, 0.88)', '#fbbf24');
+
+            pollutionObjects[index].forEach(obj => {
+                obj.visible = true;
+            });
+        }
+        cpObj.labelSprite.position.y = 4.4;
+        cpObj.group.add(cpObj.labelSprite);
+    }
+
+    function triggerWorldCelebration() {
+        if (gameState.celebrationTriggered) return;
+        gameState.celebrationTriggered = true;
+
+        // Dunia menjadi lebih ceria & terang
+        scene.background = new THREE.Color(0x38bdf8);
+        scene.fog = new THREE.FogExp2(0xbae6fd, 0.005);
+        dirLight.intensity = 1.45;
+        hemiLight.intensity = 1.0;
+
+        // Kembangkan bunga-bunga
+        flowers.forEach(f => f.scale.set(1.8, 1.8, 1.8));
+
+        // Burung terbang lebih rendah & ceria
+        birds.forEach(b => { b.height = 7.5 + Math.random() * 3; });
+
+        // Partikel Confetti 3D di sekeliling pemain
+        const count = 260;
+        const geo = new THREE.BufferGeometry();
+        const positions = new Float32Array(count * 3);
+        const colors = new Float32Array(count * 3);
+        const palette = [0xfacc15, 0x4ade80, 0x38bdf8, 0xf43f5e, 0xa855f7];
+
+        for (let i = 0; i < count; i++) {
+            positions[i * 3] = player.pos.x + (Math.random() - 0.5) * 40;
+            positions[i * 3 + 1] = 2 + Math.random() * 18;
+            positions[i * 3 + 2] = player.pos.z + (Math.random() - 0.5) * 40;
+
+            const c = new THREE.Color(palette[i % palette.length]);
+            colors[i * 3] = c.r;
+            colors[i * 3 + 1] = c.g;
+            colors[i * 3 + 2] = c.b;
+        }
+        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        const mat = new THREE.PointsMaterial({ size: 0.45, vertexColors: true });
+        celebrationParticles = new THREE.Points(geo, mat);
+        scene.add(celebrationParticles);
+    }
+
+    // ============================================================================
+    // 6. FIRST-PERSON MOVEMENT & CONTROLS (Keyboard + Mouse & Touch Joysticks)
+    // ============================================================================
+    const keys = {};
+    const moveInput = { x: 0, z: 0 };
+    const lookInput = { x: 0, y: 0 };
+    let isPointerLocked = false;
+    let isMouseDragging = false;
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+
+    window.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+
+        if (e.code === 'Escape') {
+            if (gameState.mode === 'playing') {
+                openSettings();
+            } else if (gameState.mode === 'settings') {
+                closeSettings();
+            } else if (gameState.mode === 'puzzle') {
+                closePuzzleModal();
+            }
+        }
+
+        if (e.code === 'KeyE' && gameState.mode === 'playing' && gameState.nearestCheckpoint !== null) {
+            openPuzzleModal(gameState.nearestCheckpoint);
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        keys[e.code] = false;
+    });
+
+    // Pointer Lock & Mouse Look on Canvas
+    canvas.addEventListener('click', () => {
+        if (gameState.mode === 'playing' && gameState.settings.controller === 'keyboard') {
+            if (canvas.requestPointerLock) {
+                canvas.requestPointerLock();
+            }
+        }
+    });
+
+    document.addEventListener('pointerlockchange', () => {
+        isPointerLocked = (document.pointerLockElement === canvas);
+        updateControllerUI();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (gameState.mode !== 'playing' || gameState.settings.controller !== 'keyboard') return;
+        const sens = 0.0022 * gameState.settings.sensitivity;
+
+        if (isPointerLocked) {
+            player.yaw -= e.movementX * sens;
+            player.pitch -= e.movementY * sens;
+            player.pitch = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, player.pitch));
+        } else if (isMouseDragging) {
+            const dx = e.clientX - lastMouseX;
+            const dy = e.clientY - lastMouseY;
+            player.yaw -= dx * sens * 1.4;
+            player.pitch -= dy * sens * 1.4;
+            player.pitch = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, player.pitch));
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        }
+    });
+
+    canvas.addEventListener('mousedown', (e) => {
+        if (gameState.mode === 'playing' && gameState.settings.controller === 'keyboard' && !isPointerLocked) {
+            isMouseDragging = true;
+            lastMouseX = e.clientX;
+            lastMouseY = e.clientY;
+        }
+    });
+    window.addEventListener('mouseup', () => { isMouseDragging = false; });
+
+    // Virtual Touch Joysticks Setup
+    function setupJoystick(zoneId, knobId, onMove) {
+        const zone = document.getElementById(zoneId);
+        const knob = document.getElementById(knobId);
+        let activeTouchId = null;
+        const maxRadius = 40;
+
+        zone.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.changedTouches[0];
+            activeTouchId = touch.identifier;
+            updateKnob(touch);
+        }, { passive: false });
+
+        zone.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === activeTouchId) {
+                    updateKnob(e.changedTouches[i]);
+                    break;
+                }
+            }
+        }, { passive: false });
+
+        const endTouch = (e) => {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                if (e.changedTouches[i].identifier === activeTouchId) {
+                    activeTouchId = null;
+                    knob.style.transform = `translate(0px, 0px)`;
+                    onMove(0, 0);
+                    break;
+                }
+            }
+        };
+        zone.addEventListener('touchend', endTouch);
+        zone.addEventListener('touchcancel', endTouch);
+
+        function updateKnob(touch) {
+            const rect = zone.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 2;
+            let dx = touch.clientX - cx;
+            let dy = touch.clientY - cy;
+            const dist = Math.hypot(dx, dy);
+            if (dist > maxRadius) {
+                dx = (dx / dist) * maxRadius;
+                dy = (dy / dist) * maxRadius;
+            }
+            knob.style.transform = `translate(${dx}px, ${dy}px)`;
+            onMove(dx / maxRadius, dy / maxRadius);
+        }
+    }
+
+    setupJoystick('joystick-left', 'knob-left', (nx, ny) => {
+        moveInput.x = nx;
+        moveInput.z = ny;
+    });
+
+    setupJoystick('joystick-right', 'knob-right', (nx, ny) => {
+        lookInput.x = nx;
+        lookInput.y = ny;
+    });
+
+    function updatePlayerMovement(dt) {
+        if (gameState.mode !== 'playing') return;
+
+        // Touch Look Input
+        if (gameState.settings.controller === 'touch') {
+            const lookSpeed = 1.9 * gameState.settings.sensitivity;
+            player.yaw -= lookInput.x * lookSpeed * dt;
+            player.pitch -= lookInput.y * lookSpeed * 0.75 * dt;
+            player.pitch = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, player.pitch));
+        }
+
+        // Gather Movement Vector
+        let forward = 0;
+        let strafe = 0;
+
+        if (keys['KeyW'] || keys['ArrowUp']) forward += 1;
+        if (keys['KeyS'] || keys['ArrowDown']) forward -= 1;
+        if (keys['KeyD'] || keys['ArrowRight']) strafe += 1;
+        if (keys['KeyA'] || keys['ArrowLeft']) strafe -= 1;
+
+        if (gameState.settings.controller === 'touch') {
+            forward -= moveInput.z;
+            strafe += moveInput.x;
+        }
+
+        const mag = Math.hypot(forward, strafe);
+        if (mag > 0.05) {
+            if (mag > 1) {
+                forward /= mag;
+                strafe /= mag;
+            }
+
+            const speed = player.baseSpeed * gameState.settings.speed * dt;
+            const sinY = Math.sin(player.yaw);
+            const cosY = Math.cos(player.yaw);
+
+            // Forward direction in Three.js (-sinY, -cosY)
+            const dx = (-sinY * forward + cosY * strafe) * speed;
+            const dz = (-cosY * forward - sinY * strafe) * speed;
+
+            let nextX = player.pos.x + dx;
+            let nextZ = player.pos.z + dz;
+
+            // Sempadan Dunia (-48 hingga +48)
+            nextX = Math.max(-47, Math.min(47, nextX));
+            nextZ = Math.max(-47, Math.min(47, nextZ));
+
+            // Halangan Sungai (Kecuali di atas jambatan z: -14.2 hingga -9.8)
+            const inRiverX = (nextX > 9.5 && nextX < 18.5);
+            const onBridgeZ = (nextZ > -14.0 && nextZ < -10.0);
+            if (inRiverX && !onBridgeZ) {
+                // Tolak balik ke tebing terdekat
+                if (player.pos.x <= 9.5) nextX = 9.5;
+                else if (player.pos.x >= 18.5) nextX = 18.5;
+            }
+
+            // Perlanggaran Objek (Pokok, Rumah, Kenderaan)
+            for (let i = 0; i < colliders.length; i++) {
+                const c = colliders[i];
+                const distX = nextX - c.x;
+                const distZ = nextZ - c.z;
+                const dist = Math.hypot(distX, distZ);
+                const minDist = player.radius + c.r;
+                if (dist < minDist && dist > 0.001) {
+                    const push = (minDist - dist) / dist;
+                    nextX += distX * push;
+                    nextZ += distZ * push;
+                }
+            }
+
+            player.pos.x = nextX;
+            player.pos.z = nextZ;
+
+            // Head bobbing halus semasa berjalan
+            player.pos.y = 1.8 + Math.sin(performance.now() * 0.01) * 0.05;
+        } else {
+            player.pos.y += (1.8 - player.pos.y) * 0.15;
+        }
+
+        camera.position.copy(player.pos);
+        camera.rotation.y = player.yaw;
+        camera.rotation.x = player.pitch;
+    }
+
+    // ============================================================================
+    // 7. CHECKPOINT PROXIMITY & COMPASS SYSTEM
+    // ============================================================================
+    let lastNotifiedCp = null;
+
+    function updateCheckpointsAndCompass(time) {
+        let closestUnfinished = null;
+        let closestDist = Infinity;
+        let interactableCp = null;
+
+        checkpointMeshes.forEach((cpObj, idx) => {
+            const cpData = CHECKPOINTS_DATA[idx];
+            const isDone = gameState.completed[idx];
+
+            // Animasi Berputar & Terapung pada Kristal 3D
+            cpObj.crystal.rotation.y = time * 1.4;
+            cpObj.crystal.position.y = 2.6 + Math.sin(time * 2.5 + idx) * 0.25;
+
+            const dist = Math.hypot(player.pos.x - cpData.pos.x, player.pos.z - cpData.pos.z);
+
+            // Animasi berdenyut apabila pemain menghampiri
+            if (dist < 10) {
+                const pulse = 1 + Math.sin(time * 6) * 0.08;
+                cpObj.pad.scale.set(pulse, 1, pulse);
+            } else {
+                cpObj.pad.scale.set(1, 1, 1);
+            }
+
+            if (!isDone && dist < closestDist) {
+                closestDist = dist;
+                closestUnfinished = { idx, dist, data: cpData };
+            }
+
+            // Jarak interaksi = 5.5 meter
+            if (dist < 5.5) {
+                interactableCp = idx;
+            }
+        });
+
+        // Update Kompas Checkpoint Terdekat
+        const compassTarget = document.getElementById('compass-target');
+        const compassArrow = document.getElementById('compass-arrow');
+
+        if (closestUnfinished) {
+            compassTarget.textContent = `${closestUnfinished.data.shortName} (${Math.round(closestUnfinished.dist)}m)`;
+            const dx = closestUnfinished.data.pos.x - player.pos.x;
+            const dz = closestUnfinished.data.pos.z - player.pos.z;
+            // Sudut sasaran berbanding arah pandangan pemain
+            const targetAngle = Math.atan2(-dx, -dz);
+            let relAngle = targetAngle - player.yaw;
+            compassArrow.style.transform = `rotate(${-relAngle}rad)`;
+        } else {
+            compassTarget.textContent = "Semua Selesai! ✔";
+            compassArrow.style.transform = `rotate(0deg)`;
+        }
+
+        // Update Prompt Interaksi
+        const promptBox = document.getElementById('checkpoint-prompt');
+        const touchInteractBtn = document.getElementById('btn-touch-interact');
+
+        if (interactableCp !== null && gameState.mode === 'playing') {
+            gameState.nearestCheckpoint = interactableCp;
+            const cp = CHECKPOINTS_DATA[interactableCp];
+            const isDone = gameState.completed[interactableCp];
+
+            document.getElementById('prompt-cp-name').textContent = cp.name;
+            document.getElementById('prompt-cp-sub').innerHTML = isDone
+                ? `Status: <span class="text-emerald-300 font-bold">SELESAI ✔</span> (Boleh ulang kaji cabaran)`
+                : `Tekan <strong>E</strong> atau sentuh butang di bawah untuk memulakan cabaran`;
+
+            promptBox.classList.remove('hidden');
+            if (gameState.settings.controller === 'touch') {
+                touchInteractBtn.classList.remove('hidden');
+            } else {
+                touchInteractBtn.classList.add('hidden');
+            }
+
+            if (lastNotifiedCp !== interactableCp) {
+                lastNotifiedCp = interactableCp;
+                audio.playSFX('checkpoint');
+            }
+        } else {
+            gameState.nearestCheckpoint = null;
+            lastNotifiedCp = null;
+            promptBox.classList.add('hidden');
+            touchInteractBtn.classList.add('hidden');
+        }
+    }
+
+    // ============================================================================
+    // 8. PUZZLE DRAG-AND-DROP SYSTEM (POINTER EVENTS - MOUSE & TOUCHSCREEN)
+    // ============================================================================
+    function openPuzzleModal(cpIndex) {
+        if (document.pointerLockElement) {
+            document.exitPointerLock();
+        }
+        audio.playSFX('tap');
+
+        gameState.mode = 'puzzle';
+        gameState.activeCheckpoint = cpIndex;
+        gameState.puzzleAttempts = 1;
+        gameState.hintUsed = false;
+
+        const cp = CHECKPOINTS_DATA[cpIndex];
+        const modal = document.getElementById('puzzle-modal');
+        const dropzone = document.getElementById('puzzle-dropzone');
+        const dropPlaceholder = document.getElementById('dropzone-placeholder');
+        const dropMatched = document.getElementById('dropzone-matched-content');
+        const feedbackBanner = document.getElementById('puzzle-feedback-banner');
+        const successPanel = document.getElementById('puzzle-success-panel');
+        const mainCardContainer = document.getElementById('main-card-container');
+        const mainCardLabel = document.getElementById('main-card-label');
+        const hintBtn = document.getElementById('btn-puzzle-hint');
+
+        // Reset UI States
+        document.getElementById('puzzle-cp-badge').textContent = cp.code;
+        document.getElementById('puzzle-location-title').textContent = cp.name;
+        document.getElementById('main-card-art').innerHTML = renderCardImage(cp.mainImg, cp.mainCaption);
+        document.getElementById('main-card-caption').textContent = cp.mainCaption;
+
+        mainCardContainer.classList.remove('hint-glow', 'border-emerald-500');
+        mainCardLabel.className = "text-center py-1 px-2 rounded-lg bg-slate-200 text-slate-700 font-bold text-[10px] sm:text-xs mb-1.5";
+        mainCardLabel.textContent = "❓ KATEGORI: MISTERI";
+
+        dropzone.className = "rounded-2xl p-2 border-3 border-dashed border-emerald-400/80 bg-emerald-950/35 dropzone-pulse flex flex-col justify-between items-center text-center relative min-h-[180px] transition-all";
+        dropPlaceholder.classList.remove('hidden');
+        dropMatched.classList.add('hidden');
+        dropMatched.innerHTML = '';
+
+        feedbackBanner.classList.add('hidden');
+        successPanel.classList.add('hidden');
+        hintBtn.disabled = false;
+        hintBtn.classList.remove('opacity-50');
+        updateAttemptsBadge();
+
+        // Render 4 Option Cards (Grid 2x2)
+        const grid = document.getElementById('puzzle-options-grid');
+        grid.innerHTML = '';
+
+        cp.options.forEach((opt) => {
+            const card = document.createElement('div');
+            card.className = "draggable-card glass-card-light rounded-2xl p-2 flex flex-col justify-between text-slate-800 relative";
+            card.dataset.optId = opt.id;
+            card.dataset.correct = opt.isCorrect ? "true" : "false";
+
+            card.innerHTML = `
+                <div class="flex items-center justify-between mb-1 pointer-events-none">
+                    <span class="w-5 h-5 rounded-full bg-slate-800 text-white font-bold text-[11px] flex items-center justify-center">${opt.id}</span>
+                    <span class="text-[10px] text-slate-400 font-semibold">⠿ Seret</span>
+                </div>
+                <div class="w-full aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 border border-slate-300 pointer-events-none">
+                    ${renderCardImage(opt.img, opt.caption)}
+                </div>
+                <p class="mt-1.5 text-[10px] sm:text-xs font-semibold text-center text-slate-700 leading-tight pointer-events-none">
+                    ${opt.caption}
+                </p>
+            `;
+
+            attachPointerDrag(card, opt, cp);
+            grid.appendChild(card);
+        });
+
+        modal.classList.remove('hidden');
+        document.getElementById('checkpoint-prompt').classList.add('hidden');
+        document.getElementById('btn-touch-interact').classList.add('hidden');
+    }
+
+    function updateAttemptsBadge() {
+        let pts = gameState.puzzleAttempts === 1 ? 100 : (gameState.puzzleAttempts === 2 ? 80 : 60);
+        if (gameState.hintUsed) pts = Math.max(10, pts - 10);
+        document.getElementById('puzzle-attempts-badge').textContent = `Cubaan: ${gameState.puzzleAttempts} (${pts} Mata)`;
+    }
+
+    function attachPointerDrag(card, option, cp) {
+        let startX = 0, startY = 0;
+        let isDragging = false;
+        let placeholderClone = null;
+
+        card.addEventListener('pointerdown', (e) => {
+            if (card.dataset.locked === 'true') return;
+            e.preventDefault();
+            audio.playSFX('drag');
+
+            isDragging = true;
+            card.setPointerCapture(e.pointerId);
+
+            const rect = card.getBoundingClientRect();
+            startX = e.clientX;
+            startY = e.clientY;
+
+            // Buat placeholder supaya susunan grid 2x2 kekal stabil semasa kad diangkat
+            placeholderClone = document.createElement('div');
+            placeholderClone.className = "rounded-2xl border-2 border-dashed border-white/25 bg-white/5";
+            placeholderClone.style.width = `${rect.width}px`;
+            placeholderClone.style.height = `${rect.height}px`;
+            card.parentNode.insertBefore(placeholderClone, card);
+
+            // Tetapkan kad kepada fixed position supaya bebas diseret ke ruang padanan
+            card.style.position = 'fixed';
+            card.style.left = `${rect.left}px`;
+            card.style.top = `${rect.top}px`;
+            card.style.width = `${rect.width}px`;
+            card.style.height = `${rect.height}px`;
+            card.classList.add('is-dragging');
+        });
+
+        card.addEventListener('pointermove', (e) => {
+            if (!isDragging) return;
+            e.preventDefault();
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            card.style.transform = `translate(${dx}px, ${dy}px) scale(1.06) rotate(2deg)`;
+
+            // Highlight Dropzone jika hover di atasnya
+            const dz = document.getElementById('puzzle-dropzone');
+            const dzRect = dz.getBoundingClientRect();
+            const isOver = (
+                e.clientX >= dzRect.left && e.clientX <= dzRect.right &&
+                e.clientY >= dzRect.top && e.clientY <= dzRect.bottom
+            );
+            if (isOver) {
+                dz.classList.add('bg-emerald-500/35', 'scale-[1.02]');
+            } else {
+                dz.classList.remove('bg-emerald-500/35', 'scale-[1.02]');
+            }
+        });
+
+        const finishDrag = (e) => {
+            if (!isDragging) return;
+            isDragging = false;
+            card.releasePointerCapture(e.pointerId);
+
+            const dz = document.getElementById('puzzle-dropzone');
+            dz.classList.remove('bg-emerald-500/35', 'scale-[1.02]');
+
+            const dzRect = dz.getBoundingClientRect();
+            const cardRect = card.getBoundingClientRect();
+            const cardCenterX = cardRect.left + cardRect.width / 2;
+            const cardCenterY = cardRect.top + cardRect.height / 2;
+
+            // Semak sama ada dilepaskan di dalam kawasan Dropzone (dengan margin toleransi 25px)
+            const droppedInside = (
+                cardCenterX >= dzRect.left - 25 && cardCenterX <= dzRect.right + 25 &&
+                cardCenterY >= dzRect.top - 25 && cardCenterY <= dzRect.bottom + 25
+            );
+
+            // Kembalikan kad ke aliran grid dahulu
+            card.classList.remove('is-dragging');
+            card.style.position = '';
+            card.style.left = '';
+            card.style.top = '';
+            card.style.width = '';
+            card.style.height = '';
+            card.style.transform = '';
+            if (placeholderClone && placeholderClone.parentNode) {
+                placeholderClone.parentNode.removeChild(placeholderClone);
+            }
+
+            if (droppedInside) {
+                if (option.isCorrect) {
+                    handleCorrectMatch(card, option, cp);
+                } else {
+                    handleWrongMatch(card, cp);
+                }
+            }
+        };
+
+        card.addEventListener('pointerup', finishDrag);
+        card.addEventListener('pointercancel', finishDrag);
+    }
+
+    function handleCorrectMatch(selectedCard, option, cp) {
+        audio.playSFX('correct');
+
+        // Kunci semua kad pilihan daripada diseret lagi
+        document.querySelectorAll('.draggable-card').forEach(c => {
+            c.dataset.locked = 'true';
+            c.style.opacity = c === selectedCard ? '0.35' : '0.6';
+            c.style.cursor = 'default';
+        });
+
+        // Kemaskini label kad kiri (MEMELIHARA ALAM)
+        const mainCardLabel = document.getElementById('main-card-label');
+        mainCardLabel.className = "text-center py-1 px-2 rounded-lg bg-emerald-600 text-white font-bold text-[10px] sm:text-xs mb-1.5";
+        mainCardLabel.textContent = "🌿 MEMELIHARA ALAM";
+        document.getElementById('main-card-container').classList.remove('hint-glow');
+        document.getElementById('main-card-container').classList.add('border-emerald-500');
+
+        // Snap gambar pasangan ke ruang padanan di sebelah gambar utama
+        const dz = document.getElementById('puzzle-dropzone');
+        dz.className = "glass-card-light rounded-2xl p-2 border-3 border-rose-500 flex flex-col justify-between text-slate-800 pop-success";
+        document.getElementById('dropzone-placeholder').classList.add('hidden');
+
+        const matchedBox = document.getElementById('dropzone-matched-content');
+        matchedBox.innerHTML = `
+            <div class="text-center py-1 px-2 rounded-lg bg-rose-600 text-white font-bold text-[10px] sm:text-xs mb-1.5">
+                ⚠️ MENCEMARKAN ALAM
+            </div>
+            <div class="w-full aspect-[4/3] rounded-xl overflow-hidden bg-slate-100 border border-slate-300">
+                ${renderCardImage(option.img, option.caption)}
+            </div>
+            <p class="mt-2 text-[11px] sm:text-xs font-semibold text-center text-slate-700 leading-tight">
+                ${option.caption}
+            </p>
+        `;
+        matchedBox.classList.remove('hidden');
+
+        // Kira Markah (Percubaan 1: 100, Percubaan 2: 80, Percubaan 3+: 60, Hint: -10)
+        let earned = 0;
+        if (!gameState.completed[cp.id]) {
+            earned = gameState.puzzleAttempts === 1 ? 100 : (gameState.puzzleAttempts === 2 ? 80 : 60);
+            if (gameState.hintUsed) earned = Math.max(10, earned - 10);
+            gameState.score += earned;
+            gameState.completed[cp.id] = true;
+            updateCheckpointVisuals(cp.id, true);
+            updateHUD();
+        }
+
+        // Papar Panel Kejayaan & Penerangan
+        document.getElementById('puzzle-feedback-banner').classList.add('hidden');
+        document.getElementById('puzzle-earned-points').textContent = earned > 0 ? `+${earned} MATA` : "ULANG KAJI ✔";
+        document.getElementById('puzzle-explanation-text').textContent = cp.explanation;
+        document.getElementById('puzzle-success-panel').classList.remove('hidden');
+    }
+
+    function handleWrongMatch(card, cp) {
+        audio.playSFX('wrong');
+        gameState.puzzleAttempts++;
+        updateAttemptsBadge();
+
+        // Animasi bergetar & border merah seketika
+        card.classList.remove('shake-error');
+        void card.offsetWidth; // trigger reflow
+        card.classList.add('shake-error');
+        setTimeout(() => card.classList.remove('shake-error'), 600);
+
+        // Papar mesej galakan/hint tanpa mendedahkan jawapan
+        const banner = document.getElementById('puzzle-feedback-banner');
+        banner.className = "mb-4 p-3 rounded-2xl text-xs sm:text-sm font-medium flex items-center gap-2.5 bg-rose-950/85 border border-rose-400 text-rose-100";
+        document.getElementById('puzzle-feedback-icon').textContent = "🤔";
+        document.getElementById('puzzle-feedback-text').innerHTML = `<strong>Kurang tepat!</strong> Cuba perhatikan semula konteks gambar utama. <em>Petunjuk: ${cp.hint}</em>`;
+        banner.classList.remove('hidden');
+    }
+
+    function closePuzzleModal() {
+        audio.playSFX('tap');
+        document.getElementById('puzzle-modal').classList.add('hidden');
+
+        // Semak sama ada kesemua 5 checkpoint telah selesai
+        const allDone = gameState.completed.every(Boolean);
+        if (allDone) {
+            showVictoryScreen();
+        } else {
+            gameState.mode = 'playing';
+        }
+    }
+
+    // ============================================================================
+    // 9. UI & HUD UPDATES, SETTINGS & VICTORY SCREEN
+    // ============================================================================
+    function updateHUD() {
+        const doneCount = gameState.completed.filter(Boolean).length;
+        document.getElementById('hud-score').textContent = gameState.score;
+        document.getElementById('hud-progress-text').textContent = `${doneCount}/5`;
+        document.getElementById('hud-progress-bar').style.width = `${(doneCount / 5) * 100}%`;
+
+        // Update 5 Badge Icons
+        document.querySelectorAll('#hud-badges span').forEach((el, idx) => {
+            if (gameState.completed[idx]) {
+                el.classList.remove('opacity-40');
+                el.classList.add('bg-emerald-500/40', 'border-emerald-300', 'scale-110');
+            } else {
+                el.classList.add('opacity-40');
+                el.classList.remove('bg-emerald-500/40', 'border-emerald-300', 'scale-110');
+            }
+        });
+    }
+
+    function updateControllerUI() {
+        const isTouch = gameState.settings.controller === 'touch';
+        const touchControls = document.getElementById('touch-controls');
+        const crosshair = document.getElementById('fps-crosshair');
+        const lockBanner = document.getElementById('pointer-lock-banner');
+
+        if (gameState.mode === 'playing') {
+            if (isTouch) {
+                touchControls.classList.remove('hidden');
+                crosshair.classList.add('hidden');
+                lockBanner.classList.add('hidden');
+            } else {
+                touchControls.classList.add('hidden');
+                crosshair.classList.remove('hidden');
+                if (!isPointerLocked) {
+                    lockBanner.classList.remove('hidden');
+                } else {
+                    lockBanner.classList.add('hidden');
+                }
+            }
+        } else {
+            touchControls.classList.add('hidden');
+            lockBanner.classList.add('hidden');
+        }
+
+        // Sync Settings Buttons
+        const btnKb = document.getElementById('ctrl-keyboard');
+        const btnTc = document.getElementById('ctrl-touch');
+        if (isTouch) {
+            btnTc.className = "py-2.5 px-3 rounded-xl bg-emerald-600 border border-emerald-300 font-bold text-xs cursor-pointer";
+            btnKb.className = "py-2.5 px-3 rounded-xl bg-slate-800 border border-white/15 font-bold text-xs cursor-pointer";
+        } else {
+            btnKb.className = "py-2.5 px-3 rounded-xl bg-emerald-600 border border-emerald-300 font-bold text-xs cursor-pointer";
+            btnTc.className = "py-2.5 px-3 rounded-xl bg-slate-800 border border-white/15 font-bold text-xs cursor-pointer";
+        }
+    }
+
+    function applyGraphicsQuality(level) {
+        gameState.settings.quality = level;
+        document.querySelectorAll('.quality-btn').forEach(btn => {
+            if (btn.dataset.quality === level) {
+                btn.className = "quality-btn py-2 rounded-xl bg-emerald-600 border border-emerald-300 font-bold text-xs cursor-pointer";
+            } else {
+                btn.className = "quality-btn py-2 rounded-xl bg-slate-800 border border-white/15 font-bold text-xs cursor-pointer";
+            }
+        });
+
+        if (level === 'low') {
+            renderer.shadowMap.enabled = false;
+            dirLight.castShadow = false;
+            scene.fog.density = 0.012;
+        } else if (level === 'medium') {
+            renderer.shadowMap.enabled = true;
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.set(1024, 1024);
+            scene.fog.density = 0.0085;
+        } else {
+            renderer.shadowMap.enabled = true;
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.set(2048, 2048);
+            scene.fog.density = 0.0065;
+        }
+        renderer.shadowMap.needsUpdate = true;
+    }
+
+    function applyResolutionScale(scale) {
+        gameState.settings.resolution = parseFloat(scale);
+        document.querySelectorAll('.res-btn').forEach(btn => {
+            if (parseFloat(btn.dataset.res) === gameState.settings.resolution) {
+                btn.className = "res-btn py-2 rounded-xl bg-emerald-600 border border-emerald-300 font-bold text-xs cursor-pointer";
+            } else {
+                btn.className = "res-btn py-2 rounded-xl bg-slate-800 border border-white/15 font-bold text-xs cursor-pointer";
+            }
+        });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2) * gameState.settings.resolution);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    let previousModeBeforeSettings = 'menu';
+    function openSettings() {
+        audio.playSFX('tap');
+        if (document.pointerLockElement) document.exitPointerLock();
+        previousModeBeforeSettings = gameState.mode === 'settings' ? previousModeBeforeSettings : gameState.mode;
+        gameState.mode = 'settings';
+        document.getElementById('reset-confirm-box').classList.add('hidden');
+        document.getElementById('settings-modal').classList.remove('hidden');
+        updateControllerUI();
+    }
+
+    function closeSettings() {
+        audio.playSFX('tap');
+        document.getElementById('settings-modal').classList.add('hidden');
+        gameState.mode = previousModeBeforeSettings;
+        updateControllerUI();
+    }
+
+    function showVictoryScreen() {
+        gameState.mode = 'victory';
+        if (document.pointerLockElement) document.exitPointerLock();
+        audio.playSFX('victory');
+        triggerWorldCelebration();
+
+        document.getElementById('victory-total-score').textContent = gameState.score;
+        document.getElementById('victory-modal').classList.remove('hidden');
+        updateControllerUI();
+    }
+
+    function resetAllProgress() {
+        gameState.score = 0;
+        gameState.completed = [false, false, false, false, false];
+        gameState.celebrationTriggered = false;
+        player.pos.set(0, 1.8, 12);
+        player.yaw = Math.PI;
+        player.pitch = 0;
+
+        // Kembalikan visual dunia & checkpoint ke asal
+        scene.background = new THREE.Color(0x87ceeb);
+        scene.fog = new THREE.FogExp2(0xa5f3fc, 0.0085);
+        dirLight.intensity = 1.15;
+        hemiLight.intensity = 0.75;
+        flowers.forEach(f => f.scale.set(1, 1, 1));
+        if (celebrationParticles) {
+            scene.remove(celebrationParticles);
+            celebrationParticles = null;
+        }
+
+        for (let i = 0; i < 5; i++) {
+            updateCheckpointVisuals(i, false);
+        }
+        updateHUD();
+    }
+
+    // ============================================================================
+    // 10. EVENT LISTENERS UNTUK SEMUA BUTANG UI
+    // ============================================================================
+    document.getElementById('btn-start-game').addEventListener('click', () => {
+        audio.init();
+        audio.playSFX('tap');
+        audio.startMusic();
+        document.getElementById('main-menu').classList.add('hidden');
+        document.getElementById('game-hud').classList.remove('hidden');
+        gameState.mode = 'playing';
+        updateControllerUI();
+    });
+
+    document.getElementById('btn-open-settings-menu').addEventListener('click', openSettings);
+    document.getElementById('btn-open-settings-hud').addEventListener('click', openSettings);
+    document.getElementById('btn-close-settings').addEventListener('click', closeSettings);
+
+    document.getElementById('btn-toggle-controller').addEventListener('click', () => {
+        audio.playSFX('tap');
+        gameState.settings.controller = gameState.settings.controller === 'keyboard' ? 'touch' : 'keyboard';
+        if (gameState.settings.controller === 'touch' && document.pointerLockElement) {
+            document.exitPointerLock();
+        }
+        updateControllerUI();
+    });
+
+    // Interact Buttons
+    document.getElementById('btn-interact-prompt').addEventListener('click', () => {
+        if (gameState.nearestCheckpoint !== null) openPuzzleModal(gameState.nearestCheckpoint);
+    });
+    document.getElementById('btn-touch-interact').addEventListener('click', () => {
+        if (gameState.nearestCheckpoint !== null) openPuzzleModal(gameState.nearestCheckpoint);
+    });
+
+    // Puzzle Hint & Close Buttons
+    document.getElementById('btn-puzzle-hint').addEventListener('click', () => {
+        if (gameState.hintUsed || gameState.activeCheckpoint === null) return;
+        audio.playSFX('tap');
+        gameState.hintUsed = true;
+        updateAttemptsBadge();
+
+        const cp = CHECKPOINTS_DATA[gameState.activeCheckpoint];
+        document.getElementById('main-card-container').classList.add('hint-glow');
+
+        const banner = document.getElementById('puzzle-feedback-banner');
+        banner.className = "mb-4 p-3 rounded-2xl text-xs sm:text-sm font-medium flex items-center gap-2.5 bg-amber-950/90 border border-amber-400 text-amber-100";
+        document.getElementById('puzzle-feedback-icon').textContent = "💡";
+        document.getElementById('puzzle-feedback-text').innerHTML = `<strong>PETUNJUK:</strong> ${cp.hint}`;
+        banner.classList.remove('hidden');
+
+        const hintBtn = document.getElementById('btn-puzzle-hint');
+        hintBtn.disabled = true;
+        hintBtn.classList.add('opacity-50');
+    });
+
+    document.getElementById('btn-close-puzzle').addEventListener('click', closePuzzleModal);
+    document.getElementById('btn-puzzle-continue').addEventListener('click', closePuzzleModal);
+
+    // Settings Controls Listeners
+    document.getElementById('toggle-music').addEventListener('click', (e) => {
+        audio.musicEnabled = !audio.musicEnabled;
+        e.target.textContent = audio.musicEnabled ? 'ON' : 'OFF';
+        e.target.className = audio.musicEnabled
+            ? 'px-3 py-1 rounded-lg bg-emerald-600 font-bold text-xs cursor-pointer'
+            : 'px-3 py-1 rounded-lg bg-slate-700 font-bold text-xs cursor-pointer';
+        if (audio.musicEnabled) audio.startMusic();
+    });
+
+    document.getElementById('slider-music').addEventListener('input', (e) => {
+        audio.musicVolume = e.target.value / 100;
+    });
+
+    document.getElementById('toggle-sfx').addEventListener('click', (e) => {
+        audio.sfxEnabled = !audio.sfxEnabled;
+        e.target.textContent = audio.sfxEnabled ? 'ON' : 'OFF';
+        e.target.className = audio.sfxEnabled
+            ? 'px-3 py-1 rounded-lg bg-emerald-600 font-bold text-xs cursor-pointer'
+            : 'px-3 py-1 rounded-lg bg-slate-700 font-bold text-xs cursor-pointer';
+    });
+
+    document.getElementById('slider-sfx').addEventListener('input', (e) => {
+        audio.sfxVolume = e.target.value / 100;
+    });
+
+    document.querySelectorAll('.quality-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            audio.playSFX('tap');
+            applyGraphicsQuality(btn.dataset.quality);
+        });
+    });
+
+    document.querySelectorAll('.res-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            audio.playSFX('tap');
+            applyResolutionScale(btn.dataset.res);
+        });
+    });
+
+    document.getElementById('ctrl-keyboard').addEventListener('click', () => {
+        audio.playSFX('tap');
+        gameState.settings.controller = 'keyboard';
+        updateControllerUI();
+    });
+
+    document.getElementById('ctrl-touch').addEventListener('click', () => {
+        audio.playSFX('tap');
+        gameState.settings.controller = 'touch';
+        updateControllerUI();
+    });
+
+    document.getElementById('slider-sensitivity').addEventListener('input', (e) => {
+        gameState.settings.sensitivity = parseFloat(e.target.value);
+        document.getElementById('val-sensitivity').textContent = `${gameState.settings.sensitivity.toFixed(1)}x`;
+    });
+
+    document.getElementById('slider-speed').addEventListener('input', (e) => {
+        gameState.settings.speed = parseFloat(e.target.value);
+        document.getElementById('val-speed').textContent = `${gameState.settings.speed.toFixed(1)}x`;
+    });
+
+    document.getElementById('btn-fullscreen').addEventListener('click', () => {
+        audio.playSFX('tap');
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+            document.exitFullscreen().catch(() => {});
+        }
+    });
+
+    document.getElementById('btn-reset-request').addEventListener('click', () => {
+        audio.playSFX('tap');
+        document.getElementById('reset-confirm-box').classList.remove('hidden');
+    });
+    document.getElementById('btn-reset-no').addEventListener('click', () => {
+        audio.playSFX('tap');
+        document.getElementById('reset-confirm-box').classList.add('hidden');
+    });
+    document.getElementById('btn-reset-yes').addEventListener('click', () => {
+        audio.playSFX('tap');
+        resetAllProgress();
+        document.getElementById('reset-confirm-box').classList.add('hidden');
+        closeSettings();
+    });
+
+    // Victory Screen Buttons
+    document.getElementById('btn-play-again').addEventListener('click', () => {
+        audio.playSFX('tap');
+        resetAllProgress();
+        document.getElementById('victory-modal').classList.add('hidden');
+        gameState.mode = 'playing';
+        updateControllerUI();
+    });
+
+    document.getElementById('btn-back-main-menu').addEventListener('click', () => {
+        audio.playSFX('tap');
+        resetAllProgress();
+        document.getElementById('victory-modal').classList.add('hidden');
+        document.getElementById('game-hud').classList.add('hidden');
+        document.getElementById('main-menu').classList.remove('hidden');
+        gameState.mode = 'menu';
+        updateControllerUI();
+    });
+
+    // ============================================================================
+    // 11. MAIN ANIMATION LOOP & WINDOW RESIZE
+    // ============================================================================
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    let lastTime = performance.now();
+
+    function animate(now) {
+        requestAnimationFrame(animate);
+
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+        const elapsed = now * 0.001;
+
+        // Menu camera slow orbit preview
+        if (gameState.mode === 'menu') {
+            const camAngle = elapsed * 0.15;
+            camera.position.set(Math.sin(camAngle) * 28, 12, Math.cos(camAngle) * 28);
+            camera.lookAt(0, 2, -10);
+        } else {
+            updatePlayerMovement(dt);
+        }
+
+        // Animasi Alam Semula Jadi (Pokok bergoyang, Awan bergerak, Burung terbang, Sungai mengalir)
+        animatedTrees.forEach(t => {
+            t.foliage.rotation.z = Math.sin(elapsed * 1.8 + t.phase) * 0.04;
+            t.foliage.rotation.x = Math.cos(elapsed * 1.4 + t.phase) * 0.03;
+        });
+
+        clouds.forEach(c => {
+            c.position.x += dt * 1.2;
+            if (c.position.x > 65) c.position.x = -65;
+        });
+
+        birds.forEach(b => {
+            b.angle += b.speed * dt;
+            b.mesh.position.set(
+                Math.cos(b.angle) * b.radius,
+                b.height + Math.sin(elapsed * 2 + b.angle) * 0.6,
+                Math.sin(b.angle) * b.radius
+            );
+            b.mesh.rotation.y = -b.angle;
+            const flap = Math.sin(elapsed * 12 + b.angle) * 0.45;
+            b.leftWing.rotation.z = flap;
+            b.rightWing.rotation.z = -flap;
+        });
+
+        if (riverMesh) {
+            riverMesh.position.y = 0.06 + Math.sin(elapsed * 2.5) * 0.02;
+        }
+
+        // Animasi asap pencemaran CP3 jika belum selesai
+        if (!gameState.completed[2]) {
+            pollutionObjects[2].forEach((s, i) => {
+                s.position.y = 1.4 + ((elapsed * 1.5 + i * 0.6) % 3.5);
+            });
+        }
+
+        // Animasi Confetti 3D setelah tamat 5/5
+        if (celebrationParticles) {
+            celebrationParticles.rotation.y += dt * 0.3;
+            celebrationParticles.position.y = Math.sin(elapsed * 2) * 0.8;
+        }
+
+        updateCheckpointsAndCompass(elapsed);
+        renderer.render(scene, camera);
+    }
+
+    // Boot Sequence on Window Load (Termasuk Pra-muat Gambar Cloudinary)
+    window.onload = async function () {
+        const bar = document.getElementById('loading-bar');
+        const txt = document.getElementById('loading-text');
+
+        bar.style.width = '30%';
+        txt.textContent = 'Membina dunia 3D alam semula jadi...';
+        buildWorld();
+        updateHUD();
+        applyGraphicsQuality(isTouchDevice ? 'low' : 'medium');
+
+        bar.style.width = '50%';
+        txt.textContent = 'Memuatkan gambar aktiviti alam sekitar...';
+
+        await preloadPuzzleImages((loaded, total) => {
+            const pct = 50 + Math.round((loaded / total) * 45);
+            bar.style.width = `${pct}%`;
+            txt.textContent = `Memuatkan gambar (${loaded}/${total})...`;
+        });
+
+        bar.style.width = '100%';
+        txt.textContent = 'Sedia untuk meneroka!';
+
+        setTimeout(() => {
+            document.getElementById('loading-screen').classList.add('hidden');
+            document.getElementById('main-menu').classList.remove('hidden');
+            animate(performance.now());
+        }, 350);
+    };
+    </script>
+</body>
+</html>
